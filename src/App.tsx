@@ -1,122 +1,123 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import { AppProvider, useApp } from './context/AppContext';
+import { HeaderNavbar, Footer } from './components/common';
+import { LoginView } from './components/auth';
+import { ContactModal, AccountConfigModal } from './components/modals';
+import { StockModuleView } from './components/stock';
+import { CompraModuleView } from './components/compra';
+import { VentaModuleView } from './components/venta';
+import { PromocionModuleView } from './components/promociones';
+import { BackendEquivalence, CodeComparator, ApiSimulator, StepGuide } from './components/docs';
+import { Code, BookOpen } from 'lucide-react';
 
-function App() {
-  const [count, setCount] = useState(0)
+const MainLayout: React.FC = () => {
+  const { isLoggedIn, activeModule } = useApp();
+  const [showApiDocs, setShowApiDocs] = useState(false);
+  const [docTab, setDocTab] = useState<'openapi' | 'backend' | 'simulator' | 'guide'>('openapi');
+
+  if (!isLoggedIn) {
+    return (
+      <>
+        <LoginView />
+        <ContactModal />
+      </>
+    );
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-sans selection:bg-orange-500 selection:text-white">
+      {/* Top Navbar matching Figma */}
+      <HeaderNavbar />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* Floating or Secondary Bar to toggle OpenAPI Docs & Architecture Guide */}
+      <div className="bg-slate-900 text-slate-300 px-4 py-1.5 text-xs flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center space-x-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="font-semibold text-white">distrimarket-ui</span>
+          <span className="text-slate-500">|</span>
+          <span className="text-slate-400">Vite + React + Tailwind + Microservicios Spring Boot</span>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowApiDocs(!showApiDocs)}
+            className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors border border-slate-700 font-medium"
+          >
+            <Code className="w-3.5 h-3.5 text-orange-400" />
+            <span>{showApiDocs ? 'Volver a UI Figma' : 'Ver Contrato OpenAPI & DTOs'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col">
+        {showApiDocs ? (
+          <div className="max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
+            <div className="flex items-center space-x-3 border-b border-slate-300 pb-3">
+              <button
+                onClick={() => setDocTab('openapi')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  docTab === 'openapi' ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Contrato OpenAPI 3.0.3 (YAML)
+              </button>
+              <button
+                onClick={() => setDocTab('backend')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  docTab === 'backend' ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Equivalencia Java DTOs & Handler
+              </button>
+              <button
+                onClick={() => setDocTab('simulator')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  docTab === 'simulator' ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Simulador de Endpoints
+              </button>
+              <button
+                onClick={() => setDocTab('guide')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center space-x-1 ${
+                  docTab === 'guide' ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Guía Paso a Paso</span>
+              </button>
+            </div>
+
+            {docTab === 'openapi' && <CodeComparator />}
+            {docTab === 'backend' && <BackendEquivalence />}
+            {docTab === 'simulator' && <ApiSimulator />}
+            {docTab === 'guide' && <StepGuide onGoToSimulator={() => setDocTab('simulator')} />}
+          </div>
+        ) : (
+          <>
+            {activeModule === 'stock' && <StockModuleView />}
+            {activeModule === 'compra' && <CompraModuleView />}
+            {activeModule === 'venta' && <VentaModuleView />}
+            {activeModule === 'promociones' && <PromocionModuleView />}
+          </>
+        )}
+      </main>
+
+      {/* Pinned Global Footer */}
+      <Footer />
+
+      {/* Modals */}
+      <ContactModal />
+      <AccountConfigModal />
+    </div>
+  );
+};
+
+export default function App() {
+  return (
+    <AppProvider>
+      <MainLayout />
+    </AppProvider>
+  );
 }
-
-export default App
