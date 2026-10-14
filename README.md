@@ -1,75 +1,70 @@
-# React + TypeScript + Vite
+# distrimarket-ui
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend de DistriMarket (React + TypeScript + Vite + Tailwind). Consume los microservicios
+de ventas, inventario y compras **siempre a través del API Gateway**.
 
-Currently, two official plugins are available:
+## Cómo ejecutar
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Levantar el backend: Eureka, gateway (8080) y los microservicios.
+2. Instalar dependencias y arrancar:
 
-## React Compiler
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. Abrir `http://localhost:5173`.
 
-## Expanding the ESLint configuration
+En desarrollo, Vite reenvía `/ventas`, `/inventario` y `/compras` al gateway (ver
+`vite.config.ts`), así el navegador no necesita CORS. Si el gateway no está en
+`http://localhost:8080`, copiar `.env.example` a `.env.local` y ajustar.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Usuarios y roles
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+El login es **provisorio**: el backend todavía no tiene autenticación, así que los usuarios
+viven en el navegador (`src/auth/userStore.ts`, donde también están los usuarios de ejemplo).
+No es seguridad real.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Rol | Ve |
+|---|---|
+| Administrador | Todo, más Administración (usuarios, timbrados, medios de pago) |
+| Vendedor | Venta, Promociones |
+| Encargado de depósito | Stock |
+| Encargado de compras | Compra, Stock |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Los roles y sus módulos se definen en `src/auth/roles.ts`.
+
+## Estructura
 
 ```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+src/
+  auth/         roles y usuarios
+  services/     conexión con el backend (un archivo por microservicio)
+  types/api.ts  DTO, espejo del openapi.yaml de distrimarket-common
+  hooks/        usePagedResource, useAsyncAction, useAsyncData
+  components/
+    common/     piezas compartidas: PagedTable, DataTable, SubTabs, FormField...
+    venta/ stock/ compra/ promociones/ administracion/   un directorio por módulo
 ```
+
+## Cómo agregar una pantalla
+
+Todas las pantallas siguen el mismo esquema. El ejemplo más corto es
+`src/components/administracion/CatalogosPanel.tsx`.
+
+1. **DTO**: agregarlos en `src/types/api.ts`.
+2. **Servicio**: una línea en el archivo del microservicio.
+   `crudResource<Respuesta, Request>('/inventario/marcas')` ya da `list`, `all`, `get`,
+   `create`, `update` y `remove`; `readResource` da solo las lecturas.
+3. **Listado**: `usePagedResource(api.recurso.list)` trae datos, búsqueda y paginación del
+   servidor; se dibuja con `<PagedTable>` declarando solo las columnas.
+4. **Formulario**: `ModalDialog` + `FormField` + `FormActions`, y `useAsyncAction` para
+   guardar y mostrar el mensaje de error que devuelve el backend.
+
+Los tres microservicios paginan con nombres distintos; `services/pagination.ts` los unifica,
+así que las pantallas no necesitan saber de cuál viene el dato.
+
+## Pendiente
+
+- Stock y Compra están conectados solo en lectura.
+- Promociones y el formulario de contacto no tienen backend: sus datos no se guardan.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Palette, User, Image, Check, Sparkles, RefreshCw, Save } from 'lucide-react';
+import { Palette, User, Image, Check, Sparkles, Save } from 'lucide-react';
 import { ModalDialog } from '../common/ModalDialog';
 import { useApp } from '../../context/AppContext';
 import { THEME_PALETTES, AVATAR_OPTIONS } from '../../data/mockData';

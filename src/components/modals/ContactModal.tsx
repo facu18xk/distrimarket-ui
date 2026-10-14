@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ModalDialog } from '../common/ModalDialog';
 import { useApp } from '../../context/AppContext';
 

@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Lock, User, ArrowRight, Mail, HelpCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { FeedbackBanner } from '../common/FormControls';
 
 export const LoginView: React.FC = () => {
   const { login, theme, setContactModalOpen } = useApp();
-  const [username, setUsername] = useState('Juan Pérez');
-  const [password, setPassword] = useState('distrimarket2026');
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      login(username, password);
-      setLoading(false);
-    }, 400);
+    const result = login(username, password);
+    setError(result.ok ? null : result.error);
   };
 
   return (
@@ -69,7 +67,8 @@ export const LoginView: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  placeholder="Ej: Juan Pérez"
+                  placeholder="Ej: vendedor"
+                  autoComplete="username"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-hidden focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all"
                 />
               </div>
@@ -89,21 +88,24 @@ export const LoginView: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-hidden focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all"
                 />
               </div>
             </div>
 
+            {error && <FeedbackBanner>{error}</FeedbackBanner>}
+
             <button
               type="submit"
-              disabled={loading}
               style={{ backgroundColor: theme.primaryHex }}
               className="w-full py-2.5 px-4 text-white font-bold rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm"
             >
-              <span>{loading ? 'Iniciando sesión...' : 'Iniciar sesión'}</span>
-              {!loading && <ArrowRight className="w-4 h-4" />}
+              <span>Iniciar sesión</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </form>
+
 
           {/* Bottom link to contact support */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-center">

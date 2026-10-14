@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Tag, Calendar, Percent } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { ModalDialog } from '../common/ModalDialog';
 import { useApp } from '../../context/AppContext';
-import { PromocionStatus } from '../../types/distrimarket';
+import type { PromocionItem, PromocionStatus } from '../../types/distrimarket';
 
 interface PromocionFormModalProps {
   isOpen: boolean;
@@ -10,9 +10,9 @@ interface PromocionFormModalProps {
 }
 
 export const PromocionFormModal: React.FC<PromocionFormModalProps> = ({ isOpen, onClose }) => {
-  const { addPromocion, theme, products } = useApp();
+  const { addPromocion, theme } = useApp();
   const [nombre, setNombre] = useState('');
-  const [tipo, setTipo] = useState<'2×1' | 'Porcentaje' | 'Precio Fijo' | 'Combo'>('Porcentaje');
+  const [tipo, setTipo] = useState<PromocionItem['tipo']>('Porcentaje');
   const [descuentoValor, setDescuentoValor] = useState('25%');
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0]);
   const [fechaFin, setFechaFin] = useState('2026-10-15');
@@ -65,7 +65,7 @@ export const PromocionFormModal: React.FC<PromocionFormModalProps> = ({ isOpen, 
             </label>
             <select
               value={tipo}
-              onChange={(e) => setTipo(e.target.value as any)}
+              onChange={(e) => setTipo(e.target.value as PromocionItem['tipo'])}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-hidden focus:border-slate-400"
             >
               <option value="Porcentaje">Porcentaje de Descuento (%)</option>

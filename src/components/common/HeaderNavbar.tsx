@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShoppingCart, LogOut, Settings, User, Check, Palette } from 'lucide-react';
+import { ShoppingCart, LogOut, User, Palette } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { MainModule } from '../../types/distrimarket';
+import { MODULE_LABELS, ROLES, homeModule } from '../../auth/roles';
 
 export const HeaderNavbar: React.FC = () => {
     const { user, theme, activeModule, setActiveModule, logout, setAccountModalOpen } = useApp();
@@ -19,41 +19,37 @@ export const HeaderNavbar: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const navItems: { id: MainModule; label: string }[] = [
-        { id: 'stock', label: 'Stock' },
-        { id: 'compra', label: 'Compra' },
-        { id: 'venta', label: 'Venta' },
-        { id: 'promociones', label: 'Promociones' },
-    ];
+    // Cada rol ve solo las pestañas de sus módulos.
+    const navItems = ROLES[user.rol].modules.map((id) => ({ id, label: MODULE_LABELS[id] }));
 
     return (
         <header
-            className="w-full text-white shadow-md transition-colors duration-200 z-40 sticky top-0"
+            className="w-full text-white shadow-md transition-colors duration-200 z-40 sticky top-0 print:hidden"
             style={{ backgroundColor: theme.primaryHex }}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                 {/* Left: Brand Logo */}
                 <div
-                    onClick={() => setActiveModule('stock')}
-                    className="flex items-center space-x-2.5 cursor-pointer select-none group"
+                    onClick={() => setActiveModule(homeModule(user.rol))}
+                    className="flex items-center space-x-2.5 cursor-pointer select-none group shrink-0"
                 >
                     <div className="bg-white/20 p-1.5 rounded-xl backdrop-blur-xs flex items-center justify-center transition-transform group-hover:scale-105">
                         <ShoppingCart className="w-5 h-5 text-white stroke-[2.5]" />
                     </div>
-                    <span className="font-extrabold text-xl tracking-tight text-white">
+                    <span className="font-extrabold text-xl tracking-tight text-white hidden md:inline">
                         DistriMarket
                     </span>
                 </div>
 
                 {/* Center: Main Module Navigation Tabs */}
-                <nav className="flex items-center space-x-1 sm:space-x-8">
+                <nav className="flex items-center space-x-1 md:space-x-6 min-w-0 mx-2 overflow-x-auto scrollbar-none">
                     {navItems.map((item) => {
                         const isActive = activeModule === item.id;
                         return (
                             <button
                                 key={item.id}
                                 onClick={() => setActiveModule(item.id)}
-                                className={`relative py-2 px-3 text-sm font-semibold transition-all duration-150 flex flex-col items-center ${isActive
+                                className={`relative py-2 px-3 text-sm font-semibold whitespace-nowrap transition-all duration-150 flex flex-col items-center ${isActive
                                     ? 'text-white'
                                     : 'text-white/80 hover:text-white hover:bg-white/10 rounded-lg'
                                     }`}
@@ -68,7 +64,7 @@ export const HeaderNavbar: React.FC = () => {
                 </nav>
 
                 {/* Right: User Profile & Dropdown */}
-                <div className="relative" ref={dropdownRef}>
+                <div className="relative shrink-0" ref={dropdownRef}>
                     <button
                         onClick={() => setDropdownOpen(!dropdownOpen)}
                         className="flex items-center space-x-2.5 bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full transition-all duration-150 focus:outline-hidden focus:ring-2 focus:ring-white/40"

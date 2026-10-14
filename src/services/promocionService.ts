@@ -1,5 +1,5 @@
-import { PromocionItem } from '../types';
-import { paginateAndFilter, PaginatedApiResponse, QueryFilterParams } from './apiClient';
+import { type PromocionItem } from '../types';
+import { paginateAndFilter, type PaginatedApiResponse, type QueryFilterParams } from './apiClient';
 
 export const promocionService = {
   getPromociones: (promociones: PromocionItem[], params: QueryFilterParams): PaginatedApiResponse<PromocionItem> => {

@@ -9,7 +9,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const normalized = status.trim().toLowerCase();
 
   // Green statuses (Óptimo, Completado, Recibida, Activo, Activa)
-  if (['óptimo', 'optimo', 'completado', 'completada', 'recibida', 'activo', 'activa'].includes(normalized)) {
+  if (['óptimo', 'optimo', 'completado', 'completada', 'recibida', 'activo', 'activa', 'emitida', 'aprobada'].includes(normalized)) {
     return <Badge variant="success">{status}</Badge>;
   }
 

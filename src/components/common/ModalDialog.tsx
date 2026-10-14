@@ -35,7 +35,11 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className={cn("p-0 overflow-hidden gap-0", maxWidthClasses)}>
+      {/* Un clic fuera no cierra el modal: no se pierde un formulario a medio cargar. Se cierra con la X, Cancelar o Esc. */}
+      <DialogContent
+        className={cn("p-0 overflow-hidden gap-0", maxWidthClasses)}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
         <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <DialogTitle className="text-base font-bold text-slate-900">{title}</DialogTitle>
           {subtitle ? (

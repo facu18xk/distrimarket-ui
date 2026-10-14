@@ -1,4 +1,3 @@
 export * from './CompraModuleView';
-export * from './CompraFormModal';
-export * from './CompraDetailModal';
-export * from './ProveedorFormModal';
+export * from './ProveedoresPanel';
+export * from './FacturasCompraPanel';

@@ -1,0 +1,109 @@
+/**
+ * Cliente HTTP único de la aplicación. Todo pasa por el API Gateway, así que
+ * la UI ve un solo sistema: /ventas, /inventario y /compras son rutas del
+ * mismo origen y el gateway las reparte al microservicio que corresponda.
+ *
+ * VITE_API_GATEWAY_URL vacío = mismo origen (en desarrollo lo resuelve el proxy
+ * de Vite; ver vite.config.ts). Así el navegador no necesita CORS.
+ */
+const GATEWAY_URL: string = (import.meta.env.VITE_API_GATEWAY_URL ?? '').replace(/\/$/, '');
+
+/** Cuerpo de error que devuelven los microservicios (manejador global). */
+export interface ApiErrorBody {
+  timestamp?: string;
+  status?: number;
+  error?: string;
+  message?: string;
+  path?: string;
+  /** Ventas: campo -> mensaje. */
+  validationErrors?: Record<string, string>;
+  /** Inventario y compras: lista de campo y mensaje. */
+  details?: { field: string; message: string }[] | null;
+}
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: ApiErrorBody | null;
+
+  constructor(status: number, message: string, body: ApiErrorBody | null) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+
+  /** Errores por campo, sin importar qué microservicio respondió. */
+  get fieldErrors(): Record<string, string> {
+    const errors: Record<string, string> = { ...(this.body?.validationErrors ?? {}) };
+    for (const detail of this.body?.details ?? []) {
+      errors[detail.field] = detail.message;
+    }
+    return errors;
+  }
+}
+
+/** Mensaje listo para mostrar al usuario a partir de cualquier error. */
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    const campos = Object.entries(error.fieldErrors).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
+    return campos.length > 0 ? `${error.message} (${campos.join('; ')})` : error.message;
+  }
+  if (error instanceof Error) return error.message;
+  return 'Ocurrió un error inesperado.';
+}
+
+export type QueryValue = string | number | boolean | null | undefined;
+export type QueryParams = Record<string, QueryValue>;
+
+function buildUrl(path: string, query?: QueryParams): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value !== undefined && value !== null && value !== '') qs.set(key, String(value));
+  }
+  const suffix = qs.toString();
+  return `${GATEWAY_URL}${path}${suffix ? `?${suffix}` : ''}`;
+}
+
+const MENSAJES_POR_ESTADO: Record<number, string> = {
+  502: 'El servicio no respondió. Verifique que el microservicio esté levantado.',
+  503: 'El servicio no está disponible en este momento. Intente más tarde.',
+  504: 'El servicio tardó demasiado en responder.',
+};
+
+async function request<T>(method: string, path: string, options: { query?: QueryParams; body?: unknown } = {}): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path, options.query), {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, 'No se pudo conectar con el API Gateway. Verifique que esté levantado.', null);
+  }
+
+  if (!response.ok) {
+    let body: ApiErrorBody | null = null;
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      // El gateway o el proxy no siempre responden JSON (502, 504).
+    }
+    const message = body?.message ?? MENSAJES_POR_ESTADO[response.status] ?? `Error ${response.status}`;
+    throw new ApiError(response.status, message, body);
+  }
+
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
+export const http = {
+  get: <T>(path: string, query?: QueryParams) => request<T>('GET', path, { query }),
+  post: <T>(path: string, body: unknown) => request<T>('POST', path, { body }),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, { body }),
+  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, { body }),
+  delete: (path: string) => request<void>('DELETE', path),
+};
