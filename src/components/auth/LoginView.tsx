@@ -4,14 +4,18 @@ import { useApp } from '../../context/AppContext';
 import { FeedbackBanner } from '../common/FormControls';
 
 export const LoginView: React.FC = () => {
-  const { login, theme, setContactModalOpen } = useApp();
+  const { login, loginNotice, theme, setContactModalOpen } = useApp();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Las credenciales las valida el microservicio de seguridad (contraseña con BCrypt) y devuelve el token.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = login(username, password);
+    setLoading(true);
+    const result = await login(username, password);
+    setLoading(false);
     setError(result.ok ? null : result.error);
   };
 
@@ -67,7 +71,7 @@ export const LoginView: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  placeholder="Ej: vendedor"
+                  placeholder="Ej: admin"
                   autoComplete="username"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:outline-hidden focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all"
                 />
@@ -94,14 +98,19 @@ export const LoginView: React.FC = () => {
               </div>
             </div>
 
-            {error && <FeedbackBanner>{error}</FeedbackBanner>}
+            {error ? (
+              <FeedbackBanner>{error}</FeedbackBanner>
+            ) : (
+              loginNotice && <FeedbackBanner variant="info">{loginNotice}</FeedbackBanner>
+            )}
 
             <button
               type="submit"
+              disabled={loading}
               style={{ backgroundColor: theme.primaryHex }}
-              className="w-full py-2.5 px-4 text-white font-bold rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm"
+              className="w-full py-2.5 px-4 text-white font-bold rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm disabled:opacity-60"
             >
-              <span>Iniciar sesión</span>
+              <span>{loading ? 'Validando...' : 'Iniciar sesión'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

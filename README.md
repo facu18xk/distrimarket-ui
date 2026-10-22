@@ -15,36 +15,46 @@ de ventas, inventario y compras **siempre a través del API Gateway**.
 
 3. Abrir `http://localhost:5173`.
 
-En desarrollo, Vite reenvía `/ventas`, `/inventario` y `/compras` al gateway (ver
+En desarrollo, Vite reenvía `/auth`, `/ventas`, `/inventario` y `/compras` al gateway (ver
 `vite.config.ts`), así el navegador no necesita CORS. Si el gateway no está en
 `http://localhost:8080`, copiar `.env.example` a `.env.local` y ajustar.
 
-## Usuarios y roles
+## Sesión, usuarios y roles
 
-El login es **provisorio**: el backend todavía no tiene autenticación, así que los usuarios
-viven en el navegador (`src/auth/userStore.ts`, donde también están los usuarios de ejemplo).
-No es seguridad real.
+El login va contra el microservicio de seguridad (`POST /auth/login`): valida la contraseña
+(BCrypt) y devuelve un **token JWT**. La UI lo guarda (`src/auth/session.ts`) y lo envía en
+cada pedido (`Authorization: Bearer ...`); si el backend responde 401 (token vencido o
+inválido) la sesión se cierra y vuelve al login con un aviso. También se cierra sola cuando
+vence el token.
+
+Usuario inicial: `admin` / `Admin123!` (lo crea distrimarket-ms-auth). Los demás usuarios
+los registra un administrador en **Administración → Usuarios** (`/auth/usuarios`),
+vinculados a un empleado o a una persona (por CI).
+
+Un usuario puede tener **varios roles** y ve la suma de sus módulos:
 
 | Rol | Ve |
 |---|---|
 | Administrador | Todo, más Administración (usuarios, timbrados, medios de pago) |
-| Vendedor | Venta, Promociones |
+| Vendedor | Venta |
 | Encargado de depósito | Stock |
-| Encargado de compras | Compra, Stock |
+| Encargado de compras | Compra |
 
+La UI solo oculta lo que no corresponde (por ejemplo, "dar de baja" clientes y facturas
+es solo para ADMIN); quien autoriza de verdad es el backend (gateway y cada microservicio).
 Los roles y sus módulos se definen en `src/auth/roles.ts`.
 
 ## Estructura
 
 ```
 src/
-  auth/         roles y usuarios
+  auth/         sesión (token JWT) y roles
   services/     conexión con el backend (un archivo por microservicio)
   types/api.ts  DTO, espejo del openapi.yaml de distrimarket-common
   hooks/        usePagedResource, useAsyncAction, useAsyncData
   components/
     common/     piezas compartidas: PagedTable, DataTable, SubTabs, FormField...
-    venta/ stock/ compra/ promociones/ administracion/   un directorio por módulo
+    venta/ stock/ compra/ administracion/   un directorio por módulo
 ```
 
 ## Cómo agregar una pantalla
@@ -66,5 +76,5 @@ así que las pantallas no necesitan saber de cuál viene el dato.
 
 ## Pendiente
 
-- Stock y Compra están conectados solo en lectura.
-- Promociones y el formulario de contacto no tienen backend: sus datos no se guardan.
+- Promociones no tiene microservicio: el módulo se quitó hasta que exista.
+- El formulario de contacto no tiene backend: el mensaje no se envía ni se guarda.

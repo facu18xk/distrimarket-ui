@@ -6,6 +6,8 @@
  * VITE_API_GATEWAY_URL vacío = mismo origen (en desarrollo lo resuelve el proxy
  * de Vite; ver vite.config.ts). Así el navegador no necesita CORS.
  */
+import { session } from '../auth/session';
+
 const GATEWAY_URL: string = (import.meta.env.VITE_API_GATEWAY_URL ?? '').replace(/\/$/, '');
 
 /** Cuerpo de error que devuelven los microservicios (manejador global). */
@@ -65,12 +67,18 @@ function buildUrl(path: string, query?: QueryParams): string {
 }
 
 const MENSAJES_POR_ESTADO: Record<number, string> = {
+  401: 'Su sesión expiró. Inicie sesión nuevamente.',
+  403: 'No tiene permisos para realizar esta operación.',
   502: 'El servicio no respondió. Verifique que el microservicio esté levantado.',
   503: 'El servicio no está disponible en este momento. Intente más tarde.',
   504: 'El servicio tardó demasiado en responder.',
 };
 
+/** Rutas públicas: un 401 aquí es "credenciales incorrectas", no una sesión vencida. */
+const RUTAS_SIN_SESION = ['/auth/login'];
+
 async function request<T>(method: string, path: string, options: { query?: QueryParams; body?: unknown } = {}): Promise<T> {
+  const token = session.token();
   let response: Response;
   try {
     response = await fetch(buildUrl(path, options.query), {
@@ -78,6 +86,8 @@ async function request<T>(method: string, path: string, options: { query?: Query
       headers: {
         Accept: 'application/json',
         ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        // Cada pedido lleva el token: el gateway y cada microservicio lo validan.
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
@@ -91,6 +101,10 @@ async function request<T>(method: string, path: string, options: { query?: Query
       body = (await response.json()) as ApiErrorBody;
     } catch {
       // El gateway o el proxy no siempre responden JSON (502, 504).
+    }
+    if (response.status === 401 && token && !RUTAS_SIN_SESION.includes(path)) {
+      // Token vencido o rechazado: se vuelve al login.
+      session.expired();
     }
     const message = body?.message ?? MENSAJES_POR_ESTADO[response.status] ?? `Error ${response.status}`;
     throw new ApiError(response.status, message, body);

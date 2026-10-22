@@ -20,3 +20,11 @@ export function preferredId(key: PreferenceKey, available: number[]): number | '
   if (saved && available.includes(saved)) return saved;
   return available[0] ?? '';
 }
+
+/**
+ * Empleado propuesto en un formulario: el del usuario que inició sesión (viene en su token)
+ * si figura en la lista; si no, el último usado.
+ */
+export function empleadoPorDefecto(idPropio: number | undefined, available: number[]): number | '' {
+  return idPropio && available.includes(idPropio) ? idPropio : preferredId('empleado', available);
+}

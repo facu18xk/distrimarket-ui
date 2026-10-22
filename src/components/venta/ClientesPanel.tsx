@@ -7,8 +7,10 @@ import { usePagedResource, useRemove } from '../../hooks';
 import { ventasApi } from '../../services';
 import type { ClienteResponseDTO } from '../../types/api';
 import { ClienteFormModal } from './ClienteFormModal';
+import { useApp } from '../../context/AppContext';
 
 export const ClientesPanel: React.FC = () => {
+  const { isAdmin } = useApp();
   const clientes = usePagedResource<ClienteResponseDTO>(ventasApi.clientes.list);
   const baja = useRemove(clientes.reload);
   const [formOpen, setFormOpen] = useState(false);
@@ -35,7 +37,8 @@ export const ClientesPanel: React.FC = () => {
     {
       header: 'Acciones',
       align: 'center',
-      cell: (c) => <ActionButtons onEdit={() => abrirFormulario(c)} onDelete={() => darDeBaja(c)} />,
+      // Dar de baja es solo para ADMIN (también lo exige ventas).
+      cell: (c) => <ActionButtons onEdit={() => abrirFormulario(c)} onDelete={isAdmin ? () => darDeBaja(c) : undefined} />,
     },
   ];
 

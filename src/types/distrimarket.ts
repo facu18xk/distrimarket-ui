@@ -2,19 +2,24 @@ import type { Role } from '../auth/roles';
 
 export type VentaSubTab = 'facturas' | 'clientes' | 'reportes';
 export type AdminSubTab = 'usuarios' | 'timbrados' | 'mediosPago';
-export type PromocionSubTab = 'activas';
 
-export type PromocionStatus = 'Activa' | 'Programada' | 'Vencida';
-export type MainModule = 'stock' | 'compra' | 'venta' | 'promociones' | 'administracion';
+export type MainModule = 'venta' | 'stock' | 'compra' | 'administracion';
 
+/** Usuario de la sesión: lo que devuelve el microservicio de seguridad (/auth/me) más su foto. */
 export interface UserProfile {
+  idUsuario?: number;
   username: string;
+  /** Nombre de la persona asociada al usuario (o el username si no hay). */
   name: string;
-  email: string;
-  /** Rol que decide qué módulos ve. */
-  rol: Role;
-  /** Nombre del rol para mostrar. */
+  /** Roles del token; deciden qué módulos ve. */
+  roles: Role[];
+  /** Nombre de los roles para mostrar. */
   role: string;
+  documento?: string;
+  /** Presentes si la persona del usuario es empleado (por ejemplo, el vendedor). */
+  idEmpleado?: number;
+  cargo?: string;
+  /** Preferencia visual guardada en el navegador. */
   avatarUrl: string;
 }
 
@@ -25,22 +30,6 @@ export interface ThemeConfig {
   hoverHex: string;
   lightBgHex: string;
   isDark: boolean;
-}
-
-export interface PromocionItem {
-  id: string;
-  nombre: string;
-  tipo: '2×1' | 'Porcentaje' | 'Precio Fijo' | 'Combo';
-  descuentoValor: string;
-  fechaInicio: string;
-  fechaFin: string;
-  estado: PromocionStatus;
-  detalles?: {
-    producto: string;
-    precioOrig: number;
-    precioPromo: number;
-    descPorc: string;
-  }[];
 }
 
 export interface ContactMessage {

@@ -1,11 +1,13 @@
 import type { MainModule } from '../types/distrimarket';
+import type { RolUsuario } from '../types/api';
 
 /**
- * Roles de la aplicación. ADMIN es independiente y ve todo; los demás ven solo
- * los módulos de su trabajo. Es una sola aplicación: el rol decide qué pestañas
- * y pantallas aparecen, no hay un proyecto por rol.
+ * Roles del sistema: los mismos que define el microservicio de seguridad y que
+ * viajan en el token. Un usuario puede tener varios (por ejemplo ADMIN y
+ * VENDEDOR) y ve la unión de sus módulos. La UI solo oculta lo que no le
+ * corresponde: quien realmente autoriza es el backend (gateway y cada servicio).
  */
-export type Role = 'ADMIN' | 'VENDEDOR' | 'DEPOSITERO' | 'COMPRADOR';
+export type Role = RolUsuario;
 
 interface RoleInfo {
   label: string;
@@ -16,12 +18,12 @@ interface RoleInfo {
 export const ROLES: Record<Role, RoleInfo> = {
   ADMIN: {
     label: 'Administrador',
-    description: 'Acceso total y administración del sistema',
-    modules: ['stock', 'compra', 'venta', 'promociones', 'administracion'],
+    description: 'Acceso total, usuarios y catálogos',
+    modules: ['venta', 'stock', 'compra', 'administracion'],
   },
   VENDEDOR: {
     label: 'Vendedor',
-    description: 'Ventas, clientes',
+    description: 'Ventas y clientes',
     modules: ['venta'],
   },
   DEPOSITERO: {
@@ -39,18 +41,29 @@ export const ROLES: Record<Role, RoleInfo> = {
 export const ROLE_LIST = Object.keys(ROLES) as Role[];
 
 export const MODULE_LABELS: Record<MainModule, string> = {
+  venta: 'Venta',
   stock: 'Stock',
   compra: 'Compra',
-  venta: 'Venta',
-  promociones: 'Promociones',
   administracion: 'Administración',
 };
 
-export function canAccess(role: Role, module: MainModule): boolean {
-  return ROLES[role].modules.includes(module);
+/** Orden fijo del menú. */
+const MODULE_ORDER: MainModule[] = ['venta', 'stock', 'compra', 'administracion'];
+
+/** Módulos que ve un usuario: la unión de los de todos sus roles. */
+export function modulesFor(roles: Role[]): MainModule[] {
+  return MODULE_ORDER.filter((module) => roles.some((rol) => ROLES[rol]?.modules.includes(module)));
 }
 
-/** Primer módulo que el rol puede ver; es su pantalla de inicio. */
-export function homeModule(role: Role): MainModule {
-  return ROLES[role].modules[0];
+export function canAccess(roles: Role[], module: MainModule): boolean {
+  return modulesFor(roles).includes(module);
+}
+
+/** Primer módulo que el usuario puede ver; es su pantalla de inicio. */
+export function homeModule(roles: Role[]): MainModule {
+  return modulesFor(roles)[0] ?? 'venta';
+}
+
+export function rolesLabel(roles: Role[]): string {
+  return roles.map((rol) => ROLES[rol]?.label ?? rol).join(' · ');
 }

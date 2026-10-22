@@ -7,6 +7,7 @@ import { useAsyncAction, useConfirm } from '../../hooks';
 import { ventasApi } from '../../services';
 import { formatDate, formatMoney } from '../../lib/format';
 import type { FacturaVentaResponseDTO } from '../../types/api';
+import { useApp } from '../../context/AppContext';
 
 interface FacturaDetailModalProps {
   factura: FacturaVentaResponseDTO | null;
@@ -24,6 +25,7 @@ const Dato: React.FC<{ label: string; children: React.ReactNode }> = ({ label, c
 );
 
 export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura, onClose, onChanged, onEdit }) => {
+  const { isAdmin } = useApp();
   const accion = useAsyncAction();
   const confirm = useConfirm();
 
@@ -105,6 +107,8 @@ export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura,
         {accion.error && <FeedbackBanner>{accion.error}</FeedbackBanner>}
 
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+          {/* Dar de baja es solo para ADMIN (también lo exige ventas); el vendedor puede anular. */}
+          {isAdmin ? (
           <Button
             variant="ghost"
             size="sm"
@@ -121,6 +125,9 @@ export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura,
             <Trash2 />
             <span>Dar de baja</span>
           </Button>
+          ) : (
+            <span />
+          )}
 
           <div className="flex items-center gap-2">
             {emitida ? (

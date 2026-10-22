@@ -16,7 +16,8 @@ import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, useLocalPagedResource } from '../../hooks';
 import { inventarioApi } from '../../services';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
-import { preferredId, rememberId } from '../../lib/preferences';
+import { empleadoPorDefecto, preferredId, rememberId } from '../../lib/preferences';
+import { useApp } from '../../context/AppContext';
 import type { AjusteStockResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
 import { cargarAjustes, cargarCatalogosStock, cargarTransferencias } from './catalogos';
 
@@ -131,6 +132,7 @@ const MovimientoFormModal: React.FC<MovimientoFormProps & { isOpen: boolean }> =
  * cabecera (un depósito y un tipo, o dos depósitos) y el detalle es el mismo.
  */
 const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved }) => {
+  const { user } = useApp();
   const catalogos = useAsyncData(cargarCatalogosStock);
   const guardar = useAsyncAction();
   const [idDeposito, setIdDeposito] = useState<number | ''>('');
@@ -145,7 +147,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
   const { depositos, empleados, productos } = catalogos.data;
 
   const deposito = idDeposito !== '' ? idDeposito : preferredId('deposito', depositos.map((d) => d.id));
-  const empleado = idEmpleado !== '' ? idEmpleado : preferredId('empleado', empleados.map((e) => e.id));
+  const empleado = idEmpleado !== '' ? idEmpleado : empleadoPorDefecto(user.idEmpleado, empleados.map((e) => e.id));
   const mismoDeposito = tipo === 'transferencia' && idDestino !== '' && idDestino === deposito;
 
   const handleSubmit = async (e: React.FormEvent) => {

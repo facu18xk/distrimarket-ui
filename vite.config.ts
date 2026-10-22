@@ -20,10 +20,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      // El navegador llama a /ventas, /inventario y /compras en su mismo origen
+      // El navegador llama a /auth, /ventas, /inventario y /compras en su mismo origen
       // y Vite lo reenvía al API Gateway: así no hace falta CORS en el backend.
       proxy: Object.fromEntries(
-        ['/ventas', '/inventario', '/compras'].map((ruta) => [ruta, { target: gateway, changeOrigin: true }])
+        ['/auth', '/ventas', '/inventario', '/compras'].map((ruta) => [ruta, { target: gateway, changeOrigin: true }])
       ),
     },
   }

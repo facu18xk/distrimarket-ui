@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext';
 export const ContactModal: React.FC = () => {
   const { contactModalOpen, setContactModalOpen, user, sendContactMessage, theme } = useApp();
   const [nombre, setNombre] = useState(user.name || '');
-  const [email, setEmail] = useState(user.email || '');
+  const [email, setEmail] = useState('');
   const [asunto, setAsunto] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [isSent, setIsSent] = useState(false);

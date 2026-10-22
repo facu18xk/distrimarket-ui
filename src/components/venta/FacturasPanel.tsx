@@ -10,8 +10,10 @@ import { cn } from '../../lib/utils';
 import type { EstadoFacturaVenta, FacturaVentaResponseDTO } from '../../types/api';
 import { FacturaDetailModal } from './FacturaDetailModal';
 import { FacturaFormModal } from './FacturaFormModal';
+import { useApp } from '../../context/AppContext';
 
 export const FacturasPanel: React.FC = () => {
+  const { isAdmin } = useApp();
   const [estado, setEstado] = useState<EstadoFacturaVenta | ''>('');
   const facturas = usePagedResource<FacturaVentaResponseDTO, FacturaVentaFilters>(ventasApi.facturas.list, {
     filters: estado ? { estado } : undefined,
@@ -43,14 +45,18 @@ export const FacturasPanel: React.FC = () => {
         <ActionButtons
           onView={() => setSeleccionada(f)}
           onEdit={f.estado === 'EMITIDA' ? () => abrirFormulario(f) : undefined}
-          onDelete={() =>
-            baja.remove(
-              {
-                title: 'Dar de baja factura',
-                message: `¿Dar de baja la factura ${formatNumeroFactura(f.numeroFactura)}? Dejará de aparecer en los listados${f.estado === 'EMITIDA' ? ' y se devolverá el stock' : ''}.`,
-              },
-              () => ventasApi.facturas.remove(f.idFacturaVenta)
-            )
+          // Dar de baja es solo para ADMIN (también lo exige ventas); el vendedor puede anular.
+          onDelete={
+            isAdmin
+              ? () =>
+                  baja.remove(
+                    {
+                      title: 'Dar de baja factura',
+                      message: `¿Dar de baja la factura ${formatNumeroFactura(f.numeroFactura)}? Dejará de aparecer en los listados${f.estado === 'EMITIDA' ? ' y se devolverá el stock' : ''}.`,
+                    },
+                    () => ventasApi.facturas.remove(f.idFacturaVenta)
+                  )
+              : undefined
           }
         />
       ),

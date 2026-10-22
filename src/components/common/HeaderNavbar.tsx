@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ShoppingCart, LogOut, User, Palette } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { MODULE_LABELS, ROLES, homeModule } from '../../auth/roles';
+import { MODULE_LABELS, homeModule, modulesFor } from '../../auth/roles';
 
 export const HeaderNavbar: React.FC = () => {
     const { user, theme, activeModule, setActiveModule, logout, setAccountModalOpen } = useApp();
@@ -19,8 +19,8 @@ export const HeaderNavbar: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Cada rol ve solo las pestañas de sus módulos.
-    const navItems = ROLES[user.rol].modules.map((id) => ({ id, label: MODULE_LABELS[id] }));
+    // Cada usuario ve las pestañas de todos sus roles (puede tener varios).
+    const navItems = modulesFor(user.roles).map((id) => ({ id, label: MODULE_LABELS[id] }));
 
     return (
         <header
@@ -30,7 +30,7 @@ export const HeaderNavbar: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                 {/* Left: Brand Logo */}
                 <div
-                    onClick={() => setActiveModule(homeModule(user.rol))}
+                    onClick={() => setActiveModule(homeModule(user.roles))}
                     className="flex items-center space-x-2.5 cursor-pointer select-none group shrink-0"
                 >
                     <div className="bg-white/20 p-1.5 rounded-xl backdrop-blur-xs flex items-center justify-center transition-transform group-hover:scale-105">
@@ -101,7 +101,7 @@ export const HeaderNavbar: React.FC = () => {
                                     />
                                     <div className="truncate">
                                         <p className="text-sm font-bold text-slate-900 truncate">{user.name}</p>
-                                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                                        <p className="text-xs text-slate-500 truncate">@{user.username}{user.cargo ? ` · ${user.cargo}` : ''}</p>
                                         <span className="inline-block mt-0.5 px-2 py-0.5 bg-orange-50 text-orange-700 text-[10px] font-semibold rounded-full">
                                             {user.role}
                                         </span>

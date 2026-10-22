@@ -1,60 +1,51 @@
 import React, { useState } from 'react';
-import { Trash2, UserPlus } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useConfirm } from '../../hooks';
-import { MODULE_LABELS, ROLES, ROLE_LIST, type Role } from '../../auth/roles';
-import type { AppUser } from '../../auth/userStore';
-import { DataTable, FeedbackBanner, FormActions, FormField, ModalDialog, fieldClass, type Column } from '../common';
+import { useAsyncAction, useAsyncData, usePagedResource, useRemove } from '../../hooks';
+import { MODULE_LABELS, ROLES, ROLE_LIST, modulesFor } from '../../auth/roles';
+import { authApi, errorMessage, inventarioApi } from '../../services';
+import { normalizeCi } from '../../lib/paraguay';
+import type { PersonaResponseDTO, RolUsuario, UsuarioResponseDTO } from '../../types/api';
+import { ActionButtons, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, fieldClass, type Column } from '../common';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 
-const EMPTY_FORM = { username: '', name: '', email: '', password: '', rol: 'VENDEDOR' as Role };
-
-/** Registro y baja de usuarios. El rol define qué módulos ve cada uno. */
+/**
+ * Usuarios del sistema, guardados en el microservicio de seguridad (/auth/usuarios).
+ * Cada usuario pertenece a una persona (o a un empleado) y puede tener varios roles.
+ */
 export const UsuariosPanel: React.FC = () => {
-  const { users, registerUser, removeUser, user } = useApp();
-  const confirm = useConfirm();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
+  const { user } = useApp();
+  const usuarios = usePagedResource<UsuarioResponseDTO>(authApi.usuarios.list, { sort: 'id' });
+  const baja = useRemove(usuarios.reload);
+  const [formOpen, setFormOpen] = useState(false);
+  const [enEdicion, setEnEdicion] = useState<UsuarioResponseDTO | null>(null);
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setForm(EMPTY_FORM);
-    setFormError(null);
+  const abrir = (usuario: UsuarioResponseDTO | null) => {
+    setEnEdicion(usuario);
+    setFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = registerUser({ ...form, avatarUrl: '' });
-    if (result.ok) closeModal();
-    else setFormError(result.error);
-  };
-
-  const handleRemove = async (target: AppUser) => {
-    const aceptado = await confirm({
-      title: 'Eliminar usuario',
-      message: `¿Eliminar al usuario "${target.username}"? Ya no podrá iniciar sesión.`,
-      confirmLabel: 'Eliminar',
-      danger: true,
-    });
-    if (!aceptado) return;
-    const result = removeUser(target.username);
-    setListError(result.ok ? null : result.error);
-  };
-
-  const columns: Column<AppUser>[] = [
+  const columns: Column<UsuarioResponseDTO>[] = [
     { header: 'Usuario', cell: (u) => u.username, className: 'font-bold text-slate-900' },
-    { header: 'Nombre', cell: (u) => u.name },
-    { header: 'Correo', cell: (u) => u.email || '—', className: 'text-slate-500 text-xs' },
+    { header: 'Nombre', cell: (u) => u.nombreCompleto ?? '—' },
+    { header: 'Documento', cell: (u) => u.documento ?? '—', className: 'text-slate-600' },
+    { header: 'Empleado', cell: (u) => (u.idEmpleado ? `#${u.idEmpleado} · ${u.cargo ?? ''}` : '—'), className: 'text-slate-600 text-xs' },
     {
-      header: 'Rol',
-      cell: (u) => <Badge variant={u.rol === 'ADMIN' ? 'default' : 'secondary'}>{ROLES[u.rol].label}</Badge>,
+      header: 'Roles',
+      cell: (u) => (
+        <div className="flex flex-wrap gap-1">
+          {u.roles.map((rol) => (
+            <Badge key={rol} variant={rol === 'ADMIN' ? 'default' : 'secondary'}>
+              {ROLES[rol]?.label ?? rol}
+            </Badge>
+          ))}
+        </div>
+      ),
     },
     {
       header: 'Módulos',
-      cell: (u) => ROLES[u.rol].modules.map((m) => MODULE_LABELS[m]).join(', '),
+      cell: (u) => modulesFor(u.roles).map((m) => MODULE_LABELS[m]).join(', '),
       className: 'text-slate-500 text-xs',
     },
     {
@@ -64,105 +55,243 @@ export const UsuariosPanel: React.FC = () => {
         u.username === user.username ? (
           <span className="text-[11px] text-slate-400">Sesión actual</span>
         ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleRemove(u)}
-            className="h-7 w-7 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-            title="Eliminar usuario"
-          >
-            <Trash2 />
-          </Button>
+          <ActionButtons
+            onEdit={() => abrir(u)}
+            onDelete={() =>
+              baja.remove(
+                { title: 'Dar de baja usuario', message: `¿Dar de baja a "${u.username}"? Ya no podrá iniciar sesión.` },
+                () => authApi.usuarios.remove(u.idUsuario)
+              )
+            }
+          />
         ),
     },
   ];
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-slate-500">El rol define qué módulos ve cada usuario al iniciar sesión.</p>
-        <Button variant="emerald" onClick={() => setModalOpen(true)}>
-          <UserPlus />
-          <span>Registrar usuario</span>
-        </Button>
-      </div>
+    <>
+      {baja.error && <FeedbackBanner className="mb-4">{baja.error}</FeedbackBanner>}
 
-      {listError && <FeedbackBanner className="mb-4">{listError}</FeedbackBanner>}
-
-      <DataTable columns={columns} rows={users} rowKey={(u) => u.username} emptyMessage="No hay usuarios registrados." />
+      <PagedTable
+        resource={usuarios}
+        columns={columns}
+        rowKey={(u) => u.idUsuario}
+        label="usuarios"
+        searchPlaceholder="Buscar por usuario, nombre o documento..."
+        emptyMessage="No hay usuarios que coincidan con la búsqueda."
+        filters={
+          <Button variant="emerald" onClick={() => abrir(null)}>
+            <UserPlus />
+            <span>Registrar usuario</span>
+          </Button>
+        }
+      />
 
       <ModalDialog
-        isOpen={modalOpen}
-        onClose={closeModal}
-        title="Registrar usuario"
-        subtitle="Solo el administrador puede crear cuentas."
+        isOpen={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={enEdicion ? `Modificar usuario "${enEdicion.username}"` : 'Registrar usuario'}
+        subtitle="Los roles definen qué módulos ve y qué puede hacer en cada microservicio."
         maxWidth="md"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Usuario" required hint="Con este nombre inicia sesión.">
-              <input
-                className={fieldClass}
-                required
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                placeholder="Ej: mlopez"
-                autoComplete="off"
-              />
-            </FormField>
-            <FormField label="Contraseña" required hint="Mínimo 6 caracteres.">
-              <input
-                className={fieldClass}
-                type="password"
-                required
-                minLength={6}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                autoComplete="new-password"
-              />
-            </FormField>
+        <UsuarioForm usuario={enEdicion} onClose={() => setFormOpen(false)} onSaved={usuarios.reload} />
+      </ModalDialog>
+    </>
+  );
+};
+
+type Vinculo = 'empleado' | 'persona';
+
+const cargarEmpleados = () => inventarioApi.empleados.all({ estado: true });
+
+interface UsuarioFormProps {
+  usuario: UsuarioResponseDTO | null;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+/** Se monta al abrir el modal: cada apertura empieza con el formulario limpio. */
+const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) => {
+  const guardar = useAsyncAction();
+  const empleados = useAsyncData(cargarEmpleados);
+  const [username, setUsername] = useState(usuario?.username ?? '');
+  const [password, setPassword] = useState('');
+  const [roles, setRoles] = useState<RolUsuario[]>(usuario?.roles ?? ['VENDEDOR']);
+  const [vinculo, setVinculo] = useState<Vinculo>('empleado');
+  const [idEmpleado, setIdEmpleado] = useState<number | ''>('');
+  const [ci, setCi] = useState('');
+  const [persona, setPersona] = useState<PersonaResponseDTO | null>(null);
+  const [errorPersona, setErrorPersona] = useState<string | null>(null);
+  const [buscando, setBuscando] = useState(false);
+
+  const alternarRol = (rol: RolUsuario) =>
+    setRoles((actuales) => (actuales.includes(rol) ? actuales.filter((r) => r !== rol) : [...actuales, rol]));
+
+  const buscarPersona = async () => {
+    setBuscando(true);
+    setPersona(null);
+    setErrorPersona(null);
+    try {
+      setPersona(await inventarioApi.personas.porCi(normalizeCi(ci)));
+    } catch (e) {
+      setErrorPersona(errorMessage(e));
+    } finally {
+      setBuscando(false);
+    }
+  };
+
+  const faltaVinculo = !usuario && (vinculo === 'empleado' ? idEmpleado === '' : !persona);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (roles.length === 0 || faltaVinculo) return;
+    const ok = await guardar.run(() =>
+      usuario
+        ? authApi.usuarios.update(usuario.idUsuario, { username: username.trim(), roles, password: password || undefined })
+        : authApi.usuarios.create({
+            username: username.trim(),
+            password,
+            roles,
+            ...(vinculo === 'empleado' ? { idEmpleado: Number(idEmpleado) } : { idPersona: persona!.id }),
+          })
+    );
+    if (ok) {
+      onSaved();
+      onClose();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="Usuario" required hint="Letras, números, punto, guion o guion bajo.">
+          <input
+            className={fieldClass}
+            required
+            minLength={3}
+            maxLength={50}
+            pattern="[A-Za-z0-9._\-]+"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Ej: mlopez"
+            autoComplete="off"
+          />
+        </FormField>
+        <FormField
+          label={usuario ? 'Nueva contraseña' : 'Contraseña'}
+          required={!usuario}
+          hint={usuario ? 'Vacía = no se cambia. Mínimo 8 caracteres.' : 'Mínimo 8 caracteres. Se guarda cifrada.'}
+        >
+          <input
+            className={fieldClass}
+            type="password"
+            required={!usuario}
+            minLength={8}
+            maxLength={72}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </FormField>
+      </div>
+
+      <FormField label="Roles" required hint="Puede tener más de uno; ve la suma de sus módulos.">
+        <div className="grid grid-cols-2 gap-2">
+          {ROLE_LIST.map((rol) => (
+            <label
+              key={rol}
+              className={`flex items-start gap-2 rounded-xl border px-3 py-2 cursor-pointer text-xs ${
+                roles.includes(rol) ? 'border-slate-800 bg-slate-50' : 'border-slate-200'
+              }`}
+            >
+              <input type="checkbox" className="mt-0.5" checked={roles.includes(rol)} onChange={() => alternarRol(rol)} />
+              <span>
+                <span className="font-semibold text-slate-800 block">{ROLES[rol].label}</span>
+                <span className="text-slate-500">{ROLES[rol].description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {roles.length === 0 && <p className="text-[11px] text-rose-600 mt-1">Elija al menos un rol.</p>}
+      </FormField>
+
+      {usuario ? (
+        <p className="text-xs text-slate-500">
+          Pertenece a <strong>{usuario.nombreCompleto ?? 'una persona'}</strong>
+          {usuario.documento ? ` (${usuario.documento})` : ''}; la persona asociada no se cambia.
+        </p>
+      ) : (
+        <FormField label="¿A quién pertenece?" required>
+          <div className="flex gap-2 mb-2">
+            {(['empleado', 'persona'] as Vinculo[]).map((opcion) => (
+              <button
+                key={opcion}
+                type="button"
+                onClick={() => setVinculo(opcion)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${
+                  vinculo === opcion ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-200 text-slate-600'
+                }`}
+              >
+                {opcion === 'empleado' ? 'Un empleado' : 'Otra persona (por CI)'}
+              </button>
+            ))}
           </div>
 
-          <FormField label="Nombre completo" required>
-            <input
-              className={fieldClass}
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Ej: María López"
-            />
-          </FormField>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Correo">
-              <input
-                className={fieldClass}
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="usuario@distrimarket.com"
-              />
-            </FormField>
-            <FormField label="Rol" required hint={ROLES[form.rol].description}>
+          {vinculo === 'empleado' ? (
+            empleados.error ? (
+              <FeedbackBanner>{empleados.error}</FeedbackBanner>
+            ) : (
               <select
                 className={fieldClass}
-                value={form.rol}
-                onChange={(e) => setForm({ ...form, rol: e.target.value as Role })}
+                value={idEmpleado}
+                onChange={(e) => setIdEmpleado(e.target.value === '' ? '' : Number(e.target.value))}
               >
-                {ROLE_LIST.map((rol) => (
-                  <option key={rol} value={rol}>
-                    {ROLES[rol].label}
+                <option value="">{empleados.loading ? 'Cargando empleados...' : 'Seleccione un empleado'}</option>
+                {(empleados.data ?? []).map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.persona.nombreCompleto} · {emp.cargo} {emp.persona.ci ? `(CI ${emp.persona.ci})` : ''}
                   </option>
                 ))}
               </select>
-            </FormField>
-          </div>
+            )
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  className={fieldClass}
+                  value={ci}
+                  onChange={(e) => {
+                    setCi(e.target.value);
+                    setPersona(null);
+                  }}
+                  placeholder="CI de la persona"
+                  inputMode="numeric"
+                />
+                <Button type="button" variant="outline" onClick={buscarPersona} disabled={!ci.trim() || buscando}>
+                  <Search />
+                  <span>{buscando ? 'Buscando...' : 'Buscar'}</span>
+                </Button>
+              </div>
+              {persona && (
+                <FeedbackBanner variant="success">
+                  {persona.nombreCompleto} (CI {persona.ci})
+                </FeedbackBanner>
+              )}
+              {errorPersona && <FeedbackBanner>{errorPersona}</FeedbackBanner>}
+            </div>
+          )}
+        </FormField>
+      )}
 
-          {formError && <FeedbackBanner>{formError}</FeedbackBanner>}
+      {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}
 
-          <FormActions onCancel={closeModal} submitLabel="Registrar" icon={<UserPlus className="w-3.5 h-3.5" />} />
-        </form>
-      </ModalDialog>
-    </div>
+      <FormActions
+        onCancel={onClose}
+        submitLabel={usuario ? 'Guardar cambios' : 'Registrar usuario'}
+        loading={guardar.loading}
+        disabled={roles.length === 0 || faltaVinculo}
+        icon={<UserPlus className="w-3.5 h-3.5" />}
+      />
+    </form>
   );
 };

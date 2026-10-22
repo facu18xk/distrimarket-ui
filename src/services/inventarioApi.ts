@@ -7,6 +7,7 @@ import type {
   DepositoResponseDTO,
   EmpleadoResponseDTO,
   MarcaResponseDTO,
+  PersonaResponseDTO,
   ProductoRequestDTO,
   ProductoResponseDTO,
   StockDepositoRequestDTO,
@@ -25,6 +26,10 @@ export const inventarioApi = {
   marcas: readResource<MarcaResponseDTO>('/inventario/marcas'),
   depositos: readResource<DepositoResponseDTO>('/inventario/depositos'),
   empleados: readResource<EmpleadoResponseDTO, { cargo?: string; estado?: boolean }>('/inventario/empleados'),
+  personas: {
+    ...readResource<PersonaResponseDTO>('/inventario/personas'),
+    porCi: (ci: string) => http.get<PersonaResponseDTO>(`/inventario/personas/ci/${encodeURIComponent(ci)}`),
+  },
   stock: {
     ...crudResource<StockDepositoResponseDTO, StockDepositoRequestDTO, { depositoId?: number; productoId?: number }>('/inventario/stock-depositos'),
     deProducto: (depositoId: number, productoId: number) =>

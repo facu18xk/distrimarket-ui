@@ -1,5 +1,6 @@
-import type { PromocionItem, ThemeConfig } from '../types/distrimarket';
+import type { ThemeConfig } from '../types/distrimarket';
 
+/** Colores de la interfaz que cada usuario puede elegir (preferencia visual, no datos de negocio). */
 export const THEME_PALETTES: ThemeConfig[] = [
   {
     colorId: 'orange',
@@ -51,18 +52,10 @@ export const THEME_PALETTES: ThemeConfig[] = [
   },
 ];
 
+/** Fotos de perfil sugeridas; cada usuario guarda la suya en su navegador. */
 export const AVATAR_OPTIONS = [
   { id: '1', name: 'Avatar 1 (Anime)', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
   { id: '2', name: 'Avatar 2 (Juan Ejecutivo)', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
   { id: '3', name: 'Avatar 3 (Ilustración Estilo Figma)', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80' },
   { id: '4', name: 'Avatar 4 (Profesional Moderna)', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80' }
-];
-
-// Promociones todavía no tiene implementación en backend, por eso tenemos mock adta
-export const INITIAL_PROMOCIONES: PromocionItem[] = [
-  { id: '1', nombre: '2×1 Pizzas Medianas', tipo: '2×1', descuentoValor: '-2026-08-20', fechaInicio: '2026-08-20', fechaFin: '2026-09-20', estado: 'Activa' },
-  { id: '2', nombre: 'Happy Hour Viernes 50%', tipo: 'Porcentaje', descuentoValor: '50%', fechaInicio: '2026-08-15', fechaFin: '2026-09-15', estado: 'Activa' },
-  { id: '3', nombre: 'Menú Ejecutivo Especial', tipo: 'Precio Fijo', descuentoValor: '$25.00', fechaInicio: '2026-09-01', fechaFin: '2026-09-30', estado: 'Programada' },
-  { id: '4', nombre: 'Descuento Cumpleañeros', tipo: 'Porcentaje', descuentoValor: '20%', fechaInicio: '2026-07-01', fechaFin: '2026-08-01', estado: 'Vencida' },
-  { id: '5', nombre: 'Combo Familiar Domingo', tipo: 'Combo', descuentoValor: '-2026-08-22', fechaInicio: '2026-08-22', fechaFin: '2026-10-22', estado: 'Activa' },
 ];

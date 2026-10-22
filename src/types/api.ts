@@ -313,3 +313,52 @@ export interface FacturaCompraRequestDTO {
   condicionCompra: CondicionCompra;
   detalles: FacturaCompraDetalleRequestDTO[];
 }
+
+// -------------------------------------------------------------- Seguridad (auth)
+
+export type RolUsuario = 'ADMIN' | 'VENDEDOR' | 'DEPOSITERO' | 'COMPRADOR';
+
+export interface LoginRequestDTO {
+  username: string;
+  password: string;
+}
+
+export interface TokenResponseDTO {
+  accessToken: string;
+  tokenType: string;
+  /** Segundos de vigencia. */
+  expiresIn: number;
+  expiresAt: string;
+  username: string;
+  roles: RolUsuario[];
+  idPersona?: number;
+  idEmpleado?: number;
+}
+
+export interface UsuarioResponseDTO {
+  idUsuario: number;
+  username: string;
+  roles: RolUsuario[];
+  activo: boolean;
+  idPersona?: number;
+  nombreCompleto?: string;
+  documento?: string;
+  idEmpleado?: number;
+  cargo?: string;
+}
+
+/** Se indica idPersona o idEmpleado (uno de los dos). */
+export interface UsuarioCreateRequestDTO {
+  username: string;
+  password: string;
+  roles: RolUsuario[];
+  idPersona?: number;
+  idEmpleado?: number;
+}
+
+/** password opcional: si viene, reemplaza la actual. */
+export interface UsuarioUpdateRequestDTO {
+  username: string;
+  password?: string;
+  roles: RolUsuario[];
+}

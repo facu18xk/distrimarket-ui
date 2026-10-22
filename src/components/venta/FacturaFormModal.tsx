@@ -6,7 +6,8 @@ import React, { useMemo, useState } from 'react';
 import { Receipt } from 'lucide-react';
 import { FeedbackBanner, FormActions, FormField, LineItemsEditor, ModalDialog, fieldClass } from '../common';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
-import { preferredId, rememberId } from '../../lib/preferences';
+import { empleadoPorDefecto, preferredId, rememberId } from '../../lib/preferences';
+import { useApp } from '../../context/AppContext';
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData } from '../../hooks';
 import { inventarioApi, ventasApi } from '../../services';
@@ -55,6 +56,7 @@ export const FacturaFormModal: React.FC<FacturaFormModalProps> = ({ isOpen, onCl
 );
 
 const FacturaForm: React.FC<Omit<FacturaFormModalProps, 'isOpen'>> = ({ onClose, onSaved, factura }) => {
+  const { user } = useApp();
   const editando = Boolean(factura);
   const catalogos = useAsyncData(cargarCatalogos);
   const guardar = useAsyncAction();
@@ -126,8 +128,8 @@ const FacturaForm: React.FC<Omit<FacturaFormModalProps, 'isOpen'>> = ({ onClose,
 
   const datos = catalogos.data;
 
-  // Vendedor y depósito se proponen ya elegidos (los últimos usados) para cargar más rápido.
-  const empleadoElegido = idEmpleado !== '' || !datos ? idEmpleado : preferredId('empleado', datos.empleados.map((e) => e.id));
+  // El vendedor propuesto es el usuario que inició sesión (si es empleado); el depósito, el último usado.
+  const empleadoElegido = idEmpleado !== '' || !datos ? idEmpleado : empleadoPorDefecto(user.idEmpleado, datos.empleados.map((e) => e.id));
   const depositoElegido =
     idDeposito !== '' || !datos ? idDeposito : preferredId('deposito', datos.depositos.filter((d) => d.estado).map((d) => d.id));
 

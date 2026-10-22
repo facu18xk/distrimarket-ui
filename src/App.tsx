@@ -6,7 +6,6 @@ import { ContactModal, AccountConfigModal } from './components/modals';
 import { StockModuleView } from './components/stock';
 import { CompraModuleView } from './components/compra';
 import { VentaModuleView } from './components/venta';
-import { PromocionModuleView } from './components/promociones';
 import { AdministracionModuleView } from './components/administracion';
 
 const MainLayout: React.FC = () => {
@@ -32,7 +31,6 @@ const MainLayout: React.FC = () => {
             {activeModule === 'stock' && <StockModuleView />}
             {activeModule === 'compra' && <CompraModuleView />}
             {activeModule === 'venta' && <VentaModuleView />}
-            {activeModule === 'promociones' && <PromocionModuleView />}
             {activeModule === 'administracion' && <AdministracionModuleView />}
           </>
         )}
