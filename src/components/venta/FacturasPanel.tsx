@@ -1,41 +1,53 @@
 import { formatNumeroFactura } from '../../lib/paraguay';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ActionButtons, FeedbackBanner, PagedTable, StatusBadge, fieldClass, type Column } from '../common';
 import { Button } from '../ui/button';
-import { usePagedResource, useRemove } from '../../hooks';
-import { ventasApi, type FacturaVentaFilters } from '../../services';
+import { useAsyncData, usePagedResource, useRemove } from '../../hooks';
+import { catalogos, ventasApi, type FacturaVentaFilters } from '../../services';
+import { indexar } from '../../lib/catalogCache';
 import { formatDate, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
-import type { EstadoFacturaVenta, FacturaVentaResponseDTO } from '../../types/api';
+import type { EstadoFacturaVenta, FacturaVentaResumenDTO } from '../../types/api';
 import { FacturaDetailModal } from './FacturaDetailModal';
 import { FacturaFormModal } from './FacturaFormModal';
 import { useApp } from '../../context/AppContext';
 
+/**
+ * Listado de facturas: el backend devuelve solo cabeceras (cliente con nombre, vendedor por id).
+ * El nombre del vendedor sale del catálogo de empleados, pedido una sola vez para toda la tabla.
+ * La factura completa, con sus líneas, se pide recién al abrirla.
+ */
 export const FacturasPanel: React.FC = () => {
   const { isAdmin } = useApp();
   const [estado, setEstado] = useState<EstadoFacturaVenta | ''>('');
-  const facturas = usePagedResource<FacturaVentaResponseDTO, FacturaVentaFilters>(ventasApi.facturas.list, {
+  const facturas = usePagedResource<FacturaVentaResumenDTO, FacturaVentaFilters>(ventasApi.facturas.list, {
     filters: estado ? { estado } : undefined,
     sort: 'id,desc',
   });
+  const empleados = useAsyncData(catalogos.empleados);
+  const empleadoPorId = useMemo(() => indexar(empleados.data, (e) => e.id), [empleados.data]);
 
   const baja = useRemove(facturas.reload);
   const [formOpen, setFormOpen] = useState(false);
-  const [enEdicion, setEnEdicion] = useState<FacturaVentaResponseDTO | null>(null);
-  const [seleccionada, setSeleccionada] = useState<FacturaVentaResponseDTO | null>(null);
+  const [idEnEdicion, setIdEnEdicion] = useState<number | null>(null);
+  const [idSeleccionada, setIdSeleccionada] = useState<number | null>(null);
 
-  const abrirFormulario = (factura: FacturaVentaResponseDTO | null) => {
-    setSeleccionada(null);
-    setEnEdicion(factura);
+  const abrirFormulario = (idFactura: number | null) => {
+    setIdSeleccionada(null);
+    setIdEnEdicion(idFactura);
     setFormOpen(true);
   };
 
-  const columns: Column<FacturaVentaResponseDTO>[] = [
+  const columns: Column<FacturaVentaResumenDTO>[] = [
     { header: 'Número', cell: (f) => formatNumeroFactura(f.numeroFactura), className: 'font-bold text-slate-900' },
     { header: 'Fecha', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
-    { header: 'Cliente', cell: (f) => f.cliente.persona.nombreCompleto },
-    { header: 'Vendedor', cell: (f) => f.empleado?.persona?.nombreCompleto ?? '—', className: 'text-slate-600' },
+    { header: 'Cliente', cell: (f) => f.clienteNombre },
+    {
+      header: 'Vendedor',
+      cell: (f) => (f.idEmpleado ? empleadoPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? '—',
+      className: 'text-slate-600',
+    },
     { header: 'Total', align: 'right', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
     { header: 'Estado', cell: (f) => <StatusBadge status={f.estado === 'EMITIDA' ? 'Emitida' : 'Anulada'} /> },
     {
@@ -43,8 +55,8 @@ export const FacturasPanel: React.FC = () => {
       align: 'center',
       cell: (f) => (
         <ActionButtons
-          onView={() => setSeleccionada(f)}
-          onEdit={f.estado === 'EMITIDA' ? () => abrirFormulario(f) : undefined}
+          onView={() => setIdSeleccionada(f.idFacturaVenta)}
+          onEdit={f.estado === 'EMITIDA' ? () => abrirFormulario(f.idFacturaVenta) : undefined}
           // Dar de baja es solo para ADMIN (también lo exige ventas); el vendedor puede anular.
           onDelete={
             isAdmin
@@ -74,7 +86,7 @@ export const FacturasPanel: React.FC = () => {
         label="facturas"
         searchPlaceholder="Buscar por número, cliente o fecha..."
         emptyMessage="No se encontraron facturas con los filtros seleccionados."
-        onRowClick={setSeleccionada}
+        onRowClick={(f) => setIdSeleccionada(f.idFacturaVenta)}
         filters={
           <>
             <select
@@ -99,11 +111,11 @@ export const FacturasPanel: React.FC = () => {
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={facturas.reload}
-        factura={enEdicion}
+        idFactura={idEnEdicion}
       />
       <FacturaDetailModal
-        factura={seleccionada}
-        onClose={() => setSeleccionada(null)}
+        idFactura={idSeleccionada}
+        onClose={() => setIdSeleccionada(null)}
         onChanged={facturas.reload}
         onEdit={abrirFormulario}
       />

@@ -1,20 +1,53 @@
 import { formatNumeroFactura } from '../../lib/paraguay';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Ban, Edit3, RotateCcw, Trash2 } from 'lucide-react';
 import { FeedbackBanner, ModalDialog, StatusBadge } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useConfirm } from '../../hooks';
-import { ventasApi } from '../../services';
+import { useAsyncAction, useAsyncData, useConfirm } from '../../hooks';
+import { catalogos, ventasApi } from '../../services';
+import { indexar } from '../../lib/catalogCache';
 import { formatDate, formatMoney } from '../../lib/format';
 import type { FacturaVentaResponseDTO } from '../../types/api';
 import { useApp } from '../../context/AppContext';
 
 interface FacturaDetailModalProps {
-  factura: FacturaVentaResponseDTO | null;
+  /** Factura a mostrar: se pide completa (con sus líneas) al abrir el detalle. */
+  idFactura: number | null;
   onClose: () => void;
   /** Se llama después de anular, reemitir o dar de baja. */
   onChanged: () => void;
-  onEdit: (factura: FacturaVentaResponseDTO) => void;
+  onEdit: (idFactura: number) => void;
+}
+
+/** El detalle se monta solo con una factura elegida: así cada apertura pide la suya. */
+export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ idFactura, ...props }) =>
+  idFactura === null ? null : <FacturaDetalle key={idFactura} idFactura={idFactura} {...props} />;
+
+const FacturaDetalle: React.FC<Omit<FacturaDetailModalProps, 'idFactura'> & { idFactura: number }> = ({
+  idFactura,
+  onClose,
+  onChanged,
+  onEdit,
+}) => {
+  const cargar = useCallback(() => ventasApi.facturas.get(idFactura), [idFactura]);
+  const factura = useAsyncData(cargar);
+
+  if (!factura.data) {
+    return (
+      <ModalDialog isOpen onClose={onClose} title="Factura" maxWidth="2xl">
+        {factura.error ? (
+          <FeedbackBanner>{factura.error}</FeedbackBanner>
+        ) : (
+          <p className="py-8 text-center text-xs text-slate-400">Cargando la factura...</p>
+        )}
+      </ModalDialog>
+    );
+  }
+  return <FacturaContenido factura={factura.data} onClose={onClose} onChanged={onChanged} onEdit={onEdit} />;
+};
+
+interface FacturaContenidoProps extends Omit<FacturaDetailModalProps, 'idFactura'> {
+  factura: FacturaVentaResponseDTO;
 }
 
 const Dato: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -24,12 +57,17 @@ const Dato: React.FC<{ label: string; children: React.ReactNode }> = ({ label, c
   </div>
 );
 
-export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura, onClose, onChanged, onEdit }) => {
+const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, onChanged, onEdit }) => {
   const { isAdmin } = useApp();
   const accion = useAsyncAction();
   const confirm = useConfirm();
-
-  if (!factura) return null;
+  // Nombres de inventario desde los catálogos en caché: la factura trae solo los ids.
+  const productos = useAsyncData(catalogos.productos);
+  const empleados = useAsyncData(catalogos.empleados);
+  const depositos = useAsyncData(catalogos.depositos);
+  const productoPorId = useMemo(() => indexar(productos.data, (p) => p.id), [productos.data]);
+  const empleado = useMemo(() => empleados.data?.find((e) => e.id === factura.idEmpleado), [empleados.data, factura.idEmpleado]);
+  const deposito = useMemo(() => depositos.data?.find((d) => d.id === factura.idDeposito), [depositos.data, factura.idDeposito]);
 
   const emitida = factura.estado === 'EMITIDA';
 
@@ -51,15 +89,15 @@ export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura,
       isOpen
       onClose={cerrar}
       title={`Factura ${formatNumeroFactura(factura.numeroFactura)}`}
-      subtitle={`Timbrado ${factura.timbrado?.numeroTimbrado ?? '—'} · ${factura.medioPago?.nombre ?? '—'}`}
+      subtitle={`Timbrado ${factura.numeroTimbrado ?? '—'} · ${factura.medioPagoNombre ?? '—'}`}
       maxWidth="2xl"
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-          <Dato label="Cliente">{factura.cliente.persona.nombreCompleto}</Dato>
+          <Dato label="Cliente">{factura.clienteNombre}</Dato>
           <Dato label="Fecha">{formatDate(factura.fechaEmision)}</Dato>
-          <Dato label="Vendedor">{factura.empleado?.persona?.nombreCompleto ?? `#${factura.empleado?.id ?? '—'}`}</Dato>
-          <Dato label="Depósito">{factura.deposito?.nombre ?? `#${factura.deposito?.id ?? '—'}`}</Dato>
+          <Dato label="Vendedor">{empleado?.persona.nombreCompleto ?? '—'}</Dato>
+          <Dato label="Depósito">{deposito?.nombre ?? '—'}</Dato>
           <div>
             <span className="text-slate-400 block">Estado</span>
             <StatusBadge status={emitida ? 'Emitida' : 'Anulada'} />
@@ -81,7 +119,7 @@ export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura,
               {factura.detalles.map((d) => (
                 <tr key={d.idDetalle}>
                   <td className="py-2.5 px-3 font-semibold text-slate-800">
-                    {d.nombreProducto ?? `Producto #${d.idProducto} (dado de baja)`}
+                    {productoPorId.get(d.idProducto)?.nombre ?? 'Producto dado de baja'}
                   </td>
                   <td className="py-2.5 px-3 text-center">{d.cantidad}</td>
                   <td className="py-2.5 px-3 text-right">{formatMoney(d.precioUnitario)}</td>
@@ -132,7 +170,7 @@ export const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ factura,
           <div className="flex items-center gap-2">
             {emitida ? (
               <>
-                <Button variant="outline" size="sm" disabled={accion.loading} onClick={() => onEdit(factura)}>
+                <Button variant="outline" size="sm" disabled={accion.loading} onClick={() => onEdit(factura.idFacturaVenta)}>
                   <Edit3 />
                   <span>Modificar</span>
                 </Button>

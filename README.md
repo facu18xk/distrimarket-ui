@@ -44,6 +44,22 @@ La UI solo oculta lo que no corresponde (por ejemplo, "dar de baja" clientes y f
 es solo para ADMIN); quien autoriza de verdad es el backend (gateway y cada microservicio).
 Los roles y sus módulos se definen en `src/auth/roles.ts`.
 
+## Rutas, errores y catálogos
+
+- **Rutas**: `/venta`, `/stock`, `/compra`, `/administracion` y `/login` (`src/routing/routes.ts`).
+  El contexto (`AppContext`) protege cada ruta según los roles del token: un módulo sin permiso
+  lleva al inicio del usuario; una ruta que no existe muestra la página **404**.
+- **Errores**: si el backend falla al cargar datos (5xx o sin conexión) se muestra la página
+  **500** con "Reintentar"; si una pantalla se rompe al dibujarse, `ErrorBoundary` muestra la
+  misma página. Un **401 o 403** cierra la sesión y vuelve al login con el motivo.
+- **Catálogos en caché** (`src/services/catalogos.ts`, `src/lib/catalogCache.ts`): productos,
+  empleados, depósitos, medios de pago, timbrados, categorías, marcas y proveedores se piden una
+  vez por sesión y se guardan en `sessionStorage`. Los listados traen solo ids (por ejemplo, la
+  factura trae `idEmpleado`) y el nombre sale del catálogo; crear, modificar o dar de baja algo de
+  un catálogo lo invalida solo. Las tablas no muestran ids técnicos.
+- **Facturas de venta**: el listado trae solo cabeceras; la factura con sus líneas se pide al abrirla.
+- **Servidor UI**: el pie muestra qué nodo respondió (`VITE_UI_NODE`), para el balanceador.
+
 ## Estructura
 
 ```

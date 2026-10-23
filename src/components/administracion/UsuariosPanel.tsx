@@ -3,7 +3,7 @@ import { Search, UserPlus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAsyncAction, useAsyncData, usePagedResource, useRemove } from '../../hooks';
 import { MODULE_LABELS, ROLES, ROLE_LIST, modulesFor } from '../../auth/roles';
-import { authApi, errorMessage, inventarioApi } from '../../services';
+import { authApi, catalogos, errorMessage, inventarioApi } from '../../services';
 import { normalizeCi } from '../../lib/paraguay';
 import type { PersonaResponseDTO, RolUsuario, UsuarioResponseDTO } from '../../types/api';
 import { ActionButtons, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, fieldClass, type Column } from '../common';
@@ -30,7 +30,7 @@ export const UsuariosPanel: React.FC = () => {
     { header: 'Usuario', cell: (u) => u.username, className: 'font-bold text-slate-900' },
     { header: 'Nombre', cell: (u) => u.nombreCompleto ?? '—' },
     { header: 'Documento', cell: (u) => u.documento ?? '—', className: 'text-slate-600' },
-    { header: 'Empleado', cell: (u) => (u.idEmpleado ? `#${u.idEmpleado} · ${u.cargo ?? ''}` : '—'), className: 'text-slate-600 text-xs' },
+    { header: 'Cargo', cell: (u) => u.cargo ?? 'No es empleado', className: 'text-slate-600 text-xs' },
     {
       header: 'Roles',
       cell: (u) => (
@@ -102,7 +102,7 @@ export const UsuariosPanel: React.FC = () => {
 
 type Vinculo = 'empleado' | 'persona';
 
-const cargarEmpleados = () => inventarioApi.empleados.all({ estado: true });
+const cargarEmpleados = async () => (await catalogos.empleados()).filter((e) => e.estado);
 
 interface UsuarioFormProps {
   usuario: UsuarioResponseDTO | null;

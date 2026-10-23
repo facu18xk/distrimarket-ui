@@ -13,15 +13,15 @@ import {
 } from '../common';
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, useLocalPagedResource, useRemove } from '../../hooks';
-import { inventarioApi } from '../../services';
+import { catalogos, inventarioApi } from '../../services';
 import { formatMoney } from '../../lib/format';
 import type { ProductoRequestDTO, ProductoResponseDTO } from '../../types/api';
 import { cargarProductos } from './catalogos';
 
-const textoDeBusqueda = (p: ProductoResponseDTO) => `${p.nombre} ${p.codigoBarra ?? ''} ${p.id}`;
+const textoDeBusqueda = (p: ProductoResponseDTO) => `${p.nombre} ${p.codigoBarra ?? ''}`;
 
 async function cargarClasificaciones() {
-  const [categorias, marcas] = await Promise.all([inventarioApi.categorias.all(), inventarioApi.marcas.all()]);
+  const [categorias, marcas] = await Promise.all([catalogos.categorias(), catalogos.marcas()]);
   return { categorias, marcas };
 }
 
@@ -31,7 +31,6 @@ export const ProductosPanel: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
 
   const columns: Column<ProductoResponseDTO>[] = [
-    { header: 'ID', cell: (p) => p.id, className: 'text-slate-500 w-16' },
     { header: 'Producto', cell: (p) => p.nombre, className: 'font-bold text-slate-900' },
     { header: 'Código de barras', cell: (p) => p.codigoBarra ?? '—', className: 'text-slate-500 text-xs' },
     { header: 'Precio de venta', align: 'right', cell: (p) => formatMoney(p.precioVenta), className: 'font-black text-slate-900' },

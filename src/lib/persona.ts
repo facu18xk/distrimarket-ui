@@ -1,5 +1,5 @@
 import { ciError, completeRuc, formatPhone, normalizeCi, onlyDigits, phoneError, rucError } from './paraguay';
-import type { PersonaRequestDTO, PersonaResponseDTO, TipoPersona } from '../types/api';
+import type { PersonaRequestDTO, TipoPersona } from '../types/api';
 
 /** Los datos de persona tal como se editan en un formulario (todo texto). */
 export interface PersonaForm {
@@ -42,7 +42,7 @@ export function personaDesdeTexto(texto: string): PersonaForm {
   return { ...PERSONA_VACIA, nombreCompleto: limpio };
 }
 
-export function personaDesdeDto(persona: PersonaResponseDTO): PersonaForm {
+export function personaDesdeDto(persona: PersonaRequestDTO): PersonaForm {
   return {
     tipoPersona: persona.tipoPersona,
     nombreCompleto: persona.nombreCompleto,

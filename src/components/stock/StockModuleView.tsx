@@ -18,7 +18,6 @@ const TABS: SubTab<Tab>[] = [
 ];
 
 const columnasDepositos: Column<DepositoResponseDTO>[] = [
-  { header: 'ID', cell: (d) => d.id, className: 'text-slate-500 w-16' },
   { header: 'Depósito', cell: (d) => d.nombre, className: 'font-bold text-slate-900' },
   { header: 'Ubicación', cell: (d) => d.ubicacion ?? '—', className: 'text-slate-600' },
   { header: 'Estado', cell: (d) => <StatusBadge status={d.estado ? 'Activo' : 'Inactivo'} /> },

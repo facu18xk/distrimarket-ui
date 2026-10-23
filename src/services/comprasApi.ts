@@ -10,7 +10,7 @@ import type {
 
 /** Microservicio de compras (distrimarket-ms-featureA), a través del gateway. */
 export const comprasApi = {
-  proveedores: crudResource<ProveedorResponseDTO, ProveedorRequestDTO>('/compras/proveedores'),
+  proveedores: crudResource<ProveedorResponseDTO, ProveedorRequestDTO>('/compras/proveedores', 'proveedores'),
   facturas: {
     ...crudResource<FacturaCompraResponseDTO, FacturaCompraRequestDTO>('/compras/facturas'),
     anular: (id: number) => http.patch<FacturaCompraResponseDTO>(`/compras/facturas/${id}/anular`),

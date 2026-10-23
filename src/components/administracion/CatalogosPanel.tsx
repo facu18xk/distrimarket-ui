@@ -43,7 +43,6 @@ export const MediosPagoPanel: React.FC = () => {
     );
 
   const columns: Column<MedioPagoDTO>[] = [
-    { header: 'ID', cell: (m) => m.idMedioPago, className: 'text-slate-500 w-20' },
     { header: 'Nombre', cell: (m) => m.nombre, className: 'font-bold text-slate-900' },
     { header: 'Acciones', align: 'center', cell: (m) => <ActionButtons onEdit={() => abrir(m)} onDelete={() => darDeBaja(m)} /> },
   ];

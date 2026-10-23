@@ -6,7 +6,7 @@
  * VITE_API_GATEWAY_URL vacío = mismo origen (en desarrollo lo resuelve el proxy
  * de Vite; ver vite.config.ts). Así el navegador no necesita CORS.
  */
-import { session } from '../auth/session';
+import { serverErrors, session } from '../auth/session';
 
 const GATEWAY_URL: string = (import.meta.env.VITE_API_GATEWAY_URL ?? '').replace(/\/$/, '');
 
@@ -92,7 +92,9 @@ async function request<T>(method: string, path: string, options: { query?: Query
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'No se pudo conectar con el API Gateway. Verifique que esté levantado.', null);
+    const mensaje = 'No se pudo conectar con el API Gateway. Verifique que esté levantado.';
+    if (method === 'GET') serverErrors.notify(mensaje);
+    throw new ApiError(0, mensaje, null);
   }
 
   if (!response.ok) {
@@ -102,11 +104,14 @@ async function request<T>(method: string, path: string, options: { query?: Query
     } catch {
       // El gateway o el proxy no siempre responden JSON (502, 504).
     }
-    if (response.status === 401 && token && !RUTAS_SIN_SESION.includes(path)) {
-      // Token vencido o rechazado: se vuelve al login.
-      session.expired();
-    }
     const message = body?.message ?? MENSAJES_POR_ESTADO[response.status] ?? `Error ${response.status}`;
+    if (token && !RUTAS_SIN_SESION.includes(path)) {
+      // Sin autenticación o sin autorización: se cierra la sesión y se vuelve al login.
+      if (response.status === 401) session.expired('Su sesión expiró o ya no es válida. Inicie sesión nuevamente.');
+      if (response.status === 403) session.expired('Su usuario no tiene permisos para esa operación. Inicie sesión nuevamente.');
+    }
+    // Una carga que falla en el servidor muestra la página de error 500; un guardado muestra el mensaje en su formulario.
+    if (method === 'GET' && response.status >= 500) serverErrors.notify(message);
     throw new ApiError(response.status, message, body);
   }
 

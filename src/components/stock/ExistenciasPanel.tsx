@@ -23,8 +23,8 @@ export const ExistenciasPanel: React.FC = () => {
   };
 
   const columns: Column<StockDepositoResponseDTO>[] = [
-    { header: 'Producto', cell: (s) => s.nombreProducto ?? `#${s.idProducto}`, className: 'font-bold text-slate-900' },
-    { header: 'Depósito', cell: (s) => s.nombreDeposito ?? `#${s.idDeposito}`, className: 'text-slate-600' },
+    { header: 'Producto', cell: (s) => s.nombreProducto ?? '—', className: 'font-bold text-slate-900' },
+    { header: 'Depósito', cell: (s) => s.nombreDeposito ?? '—', className: 'text-slate-600' },
     { header: 'Cantidad', align: 'right', cell: (s) => s.cantidad, className: 'font-black text-slate-900' },
     {
       header: 'Acciones',

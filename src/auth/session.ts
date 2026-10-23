@@ -32,7 +32,7 @@ function read(): Session | null {
   }
 }
 
-type Listener = () => void;
+type Listener = (motivo: string) => void;
 const expiredListeners = new Set<Listener>();
 
 export const session = {
@@ -57,16 +57,39 @@ export const session = {
     localStorage.removeItem(KEY);
   },
 
-  /** El backend rechazó el token (vencido o inválido): avisa a quien muestre la pantalla de login. */
-  expired(): void {
+  /**
+   * El backend rechazó el pedido por autenticación o autorización (401/403): se cierra la sesión
+   * y se avisa a quien muestra la pantalla de login, con el motivo para el usuario.
+   */
+  expired(motivo: string): void {
     localStorage.removeItem(KEY);
-    expiredListeners.forEach((listener) => listener());
+    expiredListeners.forEach((listener) => listener(motivo));
   },
 
   onExpired(listener: Listener): () => void {
     expiredListeners.add(listener);
     return () => {
       expiredListeners.delete(listener);
+    };
+  },
+};
+
+type ServerErrorListener = (mensaje: string) => void;
+const serverErrorListeners = new Set<ServerErrorListener>();
+
+/**
+ * Fallas del backend al cargar datos (5xx o sin conexión): la pantalla se reemplaza por la
+ * página de error 500 en lugar de quedar en blanco o a medias.
+ */
+export const serverErrors = {
+  notify(mensaje: string): void {
+    serverErrorListeners.forEach((listener) => listener(mensaje));
+  },
+
+  subscribe(listener: ServerErrorListener): () => void {
+    serverErrorListeners.add(listener);
+    return () => {
+      serverErrorListeners.delete(listener);
     };
   },
 };

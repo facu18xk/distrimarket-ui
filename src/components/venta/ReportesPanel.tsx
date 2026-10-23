@@ -4,10 +4,11 @@ import { DataTable, FeedbackBanner, FormField, fieldClass, type Column } from '.
 import { Button } from '../ui/button';
 import { useApp } from '../../context/AppContext';
 import { useAsyncData } from '../../hooks';
-import { inventarioApi, ventasApi, type FacturaVentaFilters } from '../../services';
+import { catalogos, ventasApi, type FacturaVentaFilters } from '../../services';
+import { conCache, indexar } from '../../lib/catalogCache';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { cn } from '../../lib/utils';
-import type { EstadoFacturaVenta, FacturaVentaResponseDTO } from '../../types/api';
+import type { EstadoFacturaVenta, FacturaVentaResumenDTO } from '../../types/api';
 
 /** Tope de facturas que suma el reporte; si el período tiene más, se avisa. */
 const MAX_FACTURAS = 500;
@@ -55,7 +56,32 @@ function agrupar<T>(items: T[], nombre: (item: T) => string, cantidad: (item: T)
 
 const porTotal = (a: Grupo, b: Grupo) => b.total - a.total;
 
-/** El backend filtra por fecha, estado, cliente, vendedor y depósito; aquí solo se agrupa. */
+/** Líneas pedidas en paralelo como máximo, para no saturar al backend. */
+const PEDIDOS_SIMULTANEOS = 6;
+
+/**
+ * Factura completa (con líneas) para el ranking de productos. Cada una se pide una sola vez por
+ * sesión: volver a generar el reporte o cambiar un filtro reutiliza las ya traídas.
+ */
+const facturaCompleta = (id: number) => conCache(`factura-${id}`, () => ventasApi.facturas.get(id), 5 * 60 * 1000);
+
+async function enParalelo<T, R>(items: T[], tarea: (item: T) => Promise<R>): Promise<R[]> {
+  const resultados: R[] = new Array(items.length);
+  let siguiente = 0;
+  const trabajador = async () => {
+    while (siguiente < items.length) {
+      const indice = siguiente++;
+      resultados[indice] = await tarea(items[indice]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PEDIDOS_SIMULTANEOS, items.length) }, trabajador));
+  return resultados;
+}
+
+/**
+ * El backend filtra por fecha, estado, cliente, vendedor y depósito y devuelve cabeceras;
+ * aquí se agrupa. Los nombres de inventario y de medios de pago salen de los catálogos en caché.
+ */
 async function cargarReporte(filtros: Filtros): Promise<Reporte> {
   const consulta: FacturaVentaFilters = {
     fechaDesde: filtros.fechaDesde,
@@ -66,7 +92,7 @@ async function cargarReporte(filtros: Filtros): Promise<Reporte> {
     idDeposito: filtros.idDeposito || undefined,
   };
 
-  const facturas: FacturaVentaResponseDTO[] = [];
+  const facturas: FacturaVentaResumenDTO[] = [];
   let pagina = 1;
   let totalPaginas: number;
   do {
@@ -79,28 +105,48 @@ async function cargarReporte(filtros: Filtros): Promise<Reporte> {
   // Los montos y rankings son de lo efectivamente vendido; lo anulado se informa aparte.
   const emitidas = facturas.filter((f) => f.estado === 'EMITIDA');
   const anuladas = facturas.filter((f) => f.estado === 'ANULADA');
-  const lineas = emitidas.flatMap((f) => f.detalles);
+
+  const [completas, productos, empleados, mediosPago] = await Promise.all([
+    enParalelo(emitidas, (f) => facturaCompleta(f.idFacturaVenta)),
+    catalogos.productos(),
+    catalogos.empleados(),
+    catalogos.mediosPago(),
+  ]);
+  const productoPorId = indexar(productos, (p) => p.id);
+  const empleadoPorId = indexar(empleados, (e) => e.id);
+  const medioPagoPorId = indexar(mediosPago, (m) => m.idMedioPago);
+  const lineas = completas.flatMap((f) => f.detalles);
 
   return {
     incompleto: pagina <= totalPaginas,
     emitidas: emitidas.length,
     totalVendido: emitidas.reduce((suma, f) => suma + f.totalGeneral, 0),
-    totalIva: emitidas.reduce((suma, f) => suma + f.totalIva, 0),
+    totalIva: completas.reduce((suma, f) => suma + f.totalIva, 0),
     anuladas: anuladas.length,
     totalAnulado: anuladas.reduce((suma, f) => suma + f.totalGeneral, 0),
     porDia: agrupar(emitidas, (f) => f.fechaEmision, () => 1, (f) => f.totalGeneral).sort((a, b) => a.nombre.localeCompare(b.nombre)),
-    porProducto: agrupar(lineas, (d) => d.nombreProducto ?? `Producto #${d.idProducto}`, (d) => d.cantidad, (d) => d.subtotal),
-    porCliente: agrupar(emitidas, (f) => f.cliente.persona.nombreCompleto, () => 1, (f) => f.totalGeneral).sort(porTotal),
-    porVendedor: agrupar(emitidas, (f) => f.empleado?.persona?.nombreCompleto ?? `Empleado #${f.empleado?.id ?? '—'}`, () => 1, (f) => f.totalGeneral).sort(porTotal),
-    porMedioPago: agrupar(emitidas, (f) => f.medioPago?.nombre ?? '—', () => 1, (f) => f.totalGeneral).sort(porTotal),
+    porProducto: agrupar(lineas, (d) => productoPorId.get(d.idProducto)?.nombre ?? 'Producto dado de baja', (d) => d.cantidad, (d) => d.subtotal),
+    porCliente: agrupar(emitidas, (f) => f.clienteNombre, () => 1, (f) => f.totalGeneral).sort(porTotal),
+    porVendedor: agrupar(
+      emitidas,
+      (f) => (f.idEmpleado ? empleadoPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? 'Sin vendedor',
+      () => 1,
+      (f) => f.totalGeneral
+    ).sort(porTotal),
+    porMedioPago: agrupar(
+      emitidas,
+      (f) => (f.idMedioPago ? medioPagoPorId.get(f.idMedioPago)?.nombre : undefined) ?? '—',
+      () => 1,
+      (f) => f.totalGeneral
+    ).sort(porTotal),
   };
 }
 
 async function cargarOpciones() {
   const [clientes, empleados, depositos] = await Promise.all([
     ventasApi.clientes.all(),
-    inventarioApi.empleados.all(),
-    inventarioApi.depositos.all(),
+    catalogos.empleados(),
+    catalogos.depositos(),
   ]);
   return { clientes, empleados, depositos };
 }

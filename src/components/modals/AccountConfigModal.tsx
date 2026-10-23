@@ -52,7 +52,7 @@ export const AccountConfigModal: React.FC = () => {
             <div>
               <dt className="text-slate-500">Empleado</dt>
               <dd className="font-semibold text-slate-900">
-                {user.idEmpleado ? `#${user.idEmpleado}${user.cargo ? ` · ${user.cargo}` : ''}` : 'No es empleado'}
+                {user.idEmpleado ? user.cargo ?? 'Empleado' : 'No es empleado'}
               </dd>
             </div>
             <div className="sm:col-span-2">

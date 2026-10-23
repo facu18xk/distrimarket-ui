@@ -2,7 +2,7 @@ import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, padNume
 import type { ClienteResponseDTO } from '../../types/api';
 import { ClienteFormModal } from './ClienteFormModal';
 import { ClientePicker } from './ClientePicker';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Receipt } from 'lucide-react';
 import { FeedbackBanner, FormActions, FormField, LineItemsEditor, ModalDialog, fieldClass } from '../common';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
@@ -10,7 +10,7 @@ import { empleadoPorDefecto, preferredId, rememberId } from '../../lib/preferenc
 import { useApp } from '../../context/AppContext';
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData } from '../../hooks';
-import { inventarioApi, ventasApi } from '../../services';
+import { catalogos, ventasApi } from '../../services';
 import { todayIso } from '../../lib/format';
 import type { FacturaVentaRequestDTO, FacturaVentaResponseDTO } from '../../types/api';
 
@@ -19,43 +19,80 @@ interface FacturaFormModalProps {
   onClose: () => void;
   /** Se llama cuando el backend confirmó el guardado. */
   onSaved: () => void;
-  /** Con factura = modificar; sin factura = emitir una nueva. */
-  factura?: FacturaVentaResponseDTO | null;
+  /** Con id = modificar esa factura (se pide completa); sin id = emitir una nueva. */
+  idFactura?: number | null;
 }
 
-/** Lo que el formulario necesita de ventas e inventario para llenar sus selectores. El cliente se busca aparte. */
+/**
+ * Lo que el formulario necesita para sus selectores. Sale de los catálogos en caché de la sesión:
+ * abrir el formulario varias veces no vuelve a pedir productos, empleados ni depósitos.
+ */
 async function cargarCatalogos() {
   const [mediosPago, timbrados, empleados, depositos, productos] = await Promise.all([
-    ventasApi.mediosPago.all(),
-    ventasApi.timbrados.all(),
-    inventarioApi.empleados.all({ estado: true }),
-    inventarioApi.depositos.all(),
-    inventarioApi.productos.all(),
+    catalogos.mediosPago(),
+    catalogos.timbrados(),
+    catalogos.empleados(),
+    catalogos.depositos(),
+    catalogos.productos(),
   ]);
-  return { mediosPago, timbrados, empleados, depositos, productos };
+  return { mediosPago, timbrados, empleados: empleados.filter((e) => e.estado), depositos, productos };
 }
 
 const idONada = (value: string): number | '' => (value === '' ? '' : Number(value));
 
+/** La factura trae el cliente plano (id, nombre y documento): alcanza para mostrarlo en el selector. */
+function clienteDeFactura(factura: FacturaVentaResponseDTO): ClienteResponseDTO {
+  const documento = factura.clienteDocumento ?? '';
+  const esRuc = documento.includes('-');
+  return {
+    idCliente: factura.idCliente,
+    estado: true,
+    persona: {
+      id: 0,
+      tipoPersona: 'FISICA',
+      nombreCompleto: factura.clienteNombre,
+      ci: esRuc ? undefined : documento,
+      ruc: esRuc ? documento : undefined,
+    },
+  };
+}
+
 /**
  * Formulario cabecera-detalle de la factura: la cabecera identifica la venta y
  * el detalle crece con una fila por producto. Precio, IVA y stock los resuelve
- * el backend; aquí el total es solo una vista previa.
+ * el backend; aquí el total es solo una vista previa. Se guarda en un solo pedido.
  */
-export const FacturaFormModal: React.FC<FacturaFormModalProps> = ({ isOpen, onClose, onSaved, factura }) => (
+export const FacturaFormModal: React.FC<FacturaFormModalProps> = ({ isOpen, onClose, onSaved, idFactura }) => (
   <ModalDialog
     isOpen={isOpen}
     onClose={onClose}
-    title={factura ? `Modificar factura ${formatNumeroFactura(factura.numeroFactura)}` : 'Emitir factura de venta'}
+    title={idFactura ? 'Modificar factura' : 'Emitir factura de venta'}
     subtitle="El precio, el IVA y el stock se toman de inventario al guardar."
     maxWidth="2xl"
   >
     {/* El contenido se monta cada vez que se abre: datos de la factura a modificar, o formulario en blanco. */}
-    <FacturaForm onClose={onClose} onSaved={onSaved} factura={factura} />
+    {idFactura ? (
+      <FacturaAEditar idFactura={idFactura} onClose={onClose} onSaved={onSaved} />
+    ) : (
+      <FacturaForm onClose={onClose} onSaved={onSaved} factura={null} />
+    )}
   </ModalDialog>
 );
 
-const FacturaForm: React.FC<Omit<FacturaFormModalProps, 'isOpen'>> = ({ onClose, onSaved, factura }) => {
+/** Para modificar, primero se pide la factura completa (con sus líneas). */
+const FacturaAEditar: React.FC<{ idFactura: number; onClose: () => void; onSaved: () => void }> = ({ idFactura, ...props }) => {
+  const cargar = useCallback(() => ventasApi.facturas.get(idFactura), [idFactura]);
+  const factura = useAsyncData(cargar);
+  if (factura.error) return <FeedbackBanner>{factura.error}</FeedbackBanner>;
+  if (!factura.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando la factura...</p>;
+  return <FacturaForm {...props} factura={factura.data} />;
+};
+
+const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura: FacturaVentaResponseDTO | null }> = ({
+  onClose,
+  onSaved,
+  factura,
+}) => {
   const { user } = useApp();
   const editando = Boolean(factura);
   const catalogos = useAsyncData(cargarCatalogos);
@@ -63,13 +100,13 @@ const FacturaForm: React.FC<Omit<FacturaFormModalProps, 'isOpen'>> = ({ onClose,
 
   const [numeroFactura, setNumeroFactura] = useState(factura ? formatNumeroFactura(factura.numeroFactura) : '');
   const [fechaEmision, setFechaEmision] = useState(factura?.fechaEmision ?? todayIso());
-  const [cliente, setCliente] = useState<ClienteResponseDTO | null>(factura?.cliente ?? null);
+  const [cliente, setCliente] = useState<ClienteResponseDTO | null>(factura ? clienteDeFactura(factura) : null);
   // Texto con el que se abre el alta de cliente; null = cerrada.
   const [altaCliente, setAltaCliente] = useState<string | null>(null);
-  const [idEmpleado, setIdEmpleado] = useState<number | ''>(factura?.empleado?.id ?? '');
-  const [idDeposito, setIdDeposito] = useState<number | ''>(factura?.deposito?.id ?? '');
-  const [idMedioPago, setIdMedioPago] = useState<number | ''>(factura?.medioPago?.idMedioPago ?? '');
-  const [idTimbrado, setIdTimbrado] = useState<number | ''>(factura?.timbrado?.idTimbrado ?? '');
+  const [idEmpleado, setIdEmpleado] = useState<number | ''>(factura?.idEmpleado ?? '');
+  const [idDeposito, setIdDeposito] = useState<number | ''>(factura?.idDeposito ?? '');
+  const [idMedioPago, setIdMedioPago] = useState<number | ''>(factura?.idMedioPago ?? '');
+  const [idTimbrado, setIdTimbrado] = useState<number | ''>(factura?.idTimbrado ?? '');
   const [lineas, setLineas] = useState<LineItem[]>(() =>
     factura && factura.detalles.length > 0
       ? factura.detalles.map((d) => newLineItem({ idProducto: d.idProducto, cantidad: d.cantidad }))

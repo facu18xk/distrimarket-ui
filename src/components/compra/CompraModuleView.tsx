@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PagedTable, StatusBadge, SubTabs, type Column, type SubTab } from '../common';
-import { useLocalPagedResource } from '../../hooks';
+import { useAsyncData, useLocalPagedResource } from '../../hooks';
+import { catalogos } from '../../services';
+import { indexar } from '../../lib/catalogCache';
 import { formatMoney } from '../../lib/format';
 import type { OrdenCompraDTO } from '../../types/api';
 import { cargarOrdenes } from './catalogos';
@@ -15,25 +17,38 @@ const TABS: SubTab<Tab>[] = [
   { id: 'ordenes', label: 'Órdenes de compra' },
 ];
 
-const columnasOrdenes: Column<OrdenCompraDTO>[] = [
-  { header: 'Orden', cell: (o) => `#${o.id}`, className: 'font-bold text-slate-900' },
-  { header: 'Proveedor', cell: (o) => `#${o.idProveedor}`, className: 'text-slate-600' },
-  { header: 'Observación', cell: (o) => o.observacion ?? '—', className: 'text-slate-600' },
-  { header: 'Total', align: 'right', cell: (o) => formatMoney(o.total), className: 'font-black text-slate-900' },
-  { header: 'Estado', cell: (o) => <StatusBadge status={o.estado ?? 'PENDIENTE'} /> },
-];
+const buscarOrden = (o: OrdenCompraDTO) => `${o.estado ?? ''} ${o.observacion ?? ''}`;
 
-const buscarOrden = (o: OrdenCompraDTO) => `${o.id} ${o.estado ?? ''} ${o.observacion ?? ''}`;
-
+/** La orden trae proveedor y empleado por id: sus nombres salen de los catálogos en caché. */
 const OrdenesPanel: React.FC = () => {
   const ordenes = useLocalPagedResource(cargarOrdenes, buscarOrden);
+  const proveedores = useAsyncData(catalogos.proveedores);
+  const empleados = useAsyncData(catalogos.empleados);
+  const proveedorPorId = useMemo(() => indexar(proveedores.data, (p) => p.idProveedor), [proveedores.data]);
+  const empleadoPorId = useMemo(() => indexar(empleados.data, (e) => e.id), [empleados.data]);
+
+  const columnas: Column<OrdenCompraDTO>[] = [
+    {
+      header: 'Proveedor',
+      cell: (o) => {
+        const p = proveedorPorId.get(o.idProveedor);
+        return p ? p.nombreFantasia || p.persona.nombreCompleto : '—';
+      },
+      className: 'font-bold text-slate-900',
+    },
+    { header: 'Responsable', cell: (o) => empleadoPorId.get(o.idEmpleado)?.persona.nombreCompleto ?? '—', className: 'text-slate-600' },
+    { header: 'Observación', cell: (o) => o.observacion ?? '—', className: 'text-slate-600' },
+    { header: 'Total', align: 'right', cell: (o) => formatMoney(o.total), className: 'font-black text-slate-900' },
+    { header: 'Estado', cell: (o) => <StatusBadge status={o.estado ?? 'PENDIENTE'} /> },
+  ];
+
   return (
     <PagedTable
       resource={ordenes}
-      columns={columnasOrdenes}
+      columns={columnas}
       rowKey={(o) => o.id}
       label="órdenes de compra"
-      searchPlaceholder="Buscar por número, estado u observación..."
+      searchPlaceholder="Buscar por estado u observación..."
     />
   );
 };

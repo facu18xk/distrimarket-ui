@@ -13,3 +13,5 @@ export * from './PersonaFields';
 export * from './SearchAndFilterBar';
 export * from './StatusBadge';
 export * from './SubTabs';
+export * from './ErrorPage';
+export * from './ErrorBoundary';

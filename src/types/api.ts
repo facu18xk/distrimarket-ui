@@ -79,11 +79,10 @@ export interface FacturaVentaRequestDTO {
   detalles: FacturaVentaDetalleRequestDTO[];
 }
 
+/** Línea de una factura: solo el id del producto; el nombre sale del catálogo de productos. */
 export interface FacturaVentaDetalleResponseDTO {
   idDetalle: number;
   idProducto: number;
-  /** Falta si inventario dio de baja el producto. */
-  nombreProducto?: string;
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
@@ -91,34 +90,31 @@ export interface FacturaVentaDetalleResponseDTO {
   montoIva: number;
 }
 
-/** Empleado y depósito llegan como objetos libres; fuera del id, todo es opcional. */
-export interface FacturaEmpleadoDTO {
-  id: number;
-  cargo?: string;
-  estado?: boolean;
-  persona?: Partial<PersonaResponseDTO>;
-}
-
-export interface FacturaDepositoDTO {
-  id: number;
-  nombre?: string;
-  ubicacion?: string;
-  estado?: boolean;
-}
-
-export interface FacturaVentaResponseDTO {
+/**
+ * Cabecera de una factura para los listados: plana, sin objetos anidados ni líneas.
+ * Empleado y depósito vienen solo por id (son de inventario); sus nombres salen de los catálogos.
+ */
+export interface FacturaVentaResumenDTO {
   idFacturaVenta: number;
   numeroFactura: string;
   fechaEmision: string;
-  activo: boolean;
   estado: EstadoFacturaVenta;
-  totalIva: number;
   totalGeneral: number;
-  cliente: ClienteResponseDTO;
-  empleado?: FacturaEmpleadoDTO;
-  deposito?: FacturaDepositoDTO;
-  medioPago?: MedioPagoDTO;
-  timbrado?: TimbradoDTO;
+  idCliente: number;
+  clienteNombre: string;
+  clienteDocumento?: string;
+  idEmpleado?: number;
+  idDeposito?: number;
+  idMedioPago?: number;
+}
+
+/** Factura completa (se pide por id al abrirla): la cabecera más sus líneas. */
+export interface FacturaVentaResponseDTO extends FacturaVentaResumenDTO {
+  activo: boolean;
+  totalIva: number;
+  medioPagoNombre?: string;
+  idTimbrado: number;
+  numeroTimbrado?: string;
   detalles: FacturaVentaDetalleResponseDTO[];
 }
 
@@ -162,11 +158,24 @@ export interface EmpleadoResponseDTO {
 
 // ------------------------------------------------------------------ Compras
 
+/** En compras la persona se identifica con idPersona (no id). */
+export interface PersonaCompraDTO extends PersonaRequestDTO {
+  idPersona: number;
+}
+
 export interface ProveedorResponseDTO {
   idProveedor: number;
   nombreFantasia?: string;
   estado: boolean;
-  persona: PersonaResponseDTO;
+  persona: PersonaCompraDTO;
+}
+
+/** Depósito tal como lo devuelve compras (idDeposito, no id). */
+export interface DepositoCompraDTO {
+  idDeposito: number;
+  nombre?: string;
+  ubicacion?: string;
+  estado?: boolean;
 }
 
 export interface FacturaCompraDetalleResponseDTO {
@@ -192,7 +201,7 @@ export interface FacturaCompraResponseDTO {
   totalIva: number;
   totalGeneral: number;
   proveedor: ProveedorResponseDTO;
-  deposito?: DepositoResponseDTO;
+  deposito?: DepositoCompraDTO;
   medioPago?: MedioPagoDTO;
   detalles: FacturaCompraDetalleResponseDTO[];
 }

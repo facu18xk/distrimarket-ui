@@ -6,3 +6,4 @@ export * from './authApi';
 export * from './ventasApi';
 export * from './inventarioApi';
 export * from './comprasApi';
+export * from './catalogos';

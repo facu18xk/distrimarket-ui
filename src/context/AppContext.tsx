@@ -3,7 +3,9 @@ import type { MainModule, VentaSubTab, AdminSubTab, UserProfile, ThemeConfig, Co
 import type { RolUsuario, UsuarioResponseDTO } from '../types/api';
 import { THEME_PALETTES } from '../lib/theme';
 import { canAccess as rolesCanAccess, homeModule, rolesLabel } from '../auth/roles';
-import { session, type Session } from '../auth/session';
+import { serverErrors, session, type Session } from '../auth/session';
+import { limpiarCatalogos } from '../lib/catalogCache';
+import { LOGIN_PATH, MODULE_PATHS, resolveRoute, type Route } from '../routing/routes';
 import { authApi, errorMessage } from '../services';
 
 export type LoginResult = { ok: true } | { ok: false; error: string };
@@ -33,9 +35,17 @@ interface AppContextType {
   setThemeColor: (colorId: string) => void;
   toggleDarkMode: () => void;
 
-  // Navegación
+  // Navegación (la URL decide el módulo; ver routing/routes)
+  route: Route;
   activeModule: MainModule;
   setActiveModule: (m: MainModule) => void;
+  goHome: () => void;
+
+  // Falla del backend al cargar datos: se muestra la página de error 500
+  serverError: string | null;
+  retryAfterServerError: () => void;
+  /** Cambia al reintentar, para volver a montar la pantalla y repetir sus pedidos. */
+  retryKey: number;
   ventaSubTab: VentaSubTab;
   setVentaSubTab: (t: VentaSubTab) => void;
   adminSubTab: AdminSubTab;
@@ -106,7 +116,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const user = current ? toProfile(current, profile, avatarUrl) : GUEST;
   const isAdmin = user.roles.includes('ADMIN');
 
-  const [activeModule, setActiveModuleState] = useState<MainModule>(() => (current ? homeModule(current.roles) : 'venta'));
+  // Ruta actual: la URL del navegador (atrás/adelante incluidos).
+  const [path, setPath] = useState(() => window.location.pathname);
+  const navigate = useCallback((to: string) => {
+    if (window.location.pathname !== to) window.history.pushState(null, '', to);
+    setPath(to);
+  }, []);
+  useEffect(() => {
+    const alVolver = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', alVolver);
+    return () => window.removeEventListener('popstate', alVolver);
+  }, []);
+
+  const route = resolveRoute(path, user.roles);
+  const activeModule = route.kind === 'notFound' ? homeModule(user.roles) : route.module;
+  // La barra de direcciones muestra siempre lo que se ve: /login sin sesión (la ruta pedida se
+  // conserva para después de entrar) y, con sesión, el módulo real (corrigiendo la raíz o un módulo sin permiso).
+  const urlVisible = !isLoggedIn ? LOGIN_PATH : route.kind === 'redirect' ? route.to : path;
+  useEffect(() => {
+    if (window.location.pathname !== urlVisible) window.history.replaceState(null, '', urlVisible);
+  }, [urlVisible, path]);
+
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  useEffect(() => serverErrors.subscribe(setServerError), []);
+  const retryAfterServerError = () => {
+    setServerError(null);
+    setRetryKey((k) => k + 1);
+  };
+
   const [ventaSubTab, setVentaSubTab] = useState<VentaSubTab>('facturas');
   const [adminSubTab, setAdminSubTab] = useState<AdminSubTab>('usuarios');
 
@@ -114,18 +152,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
 
-  const endSession = useCallback((notice: string | null) => {
-    session.clear();
-    setCurrent(null);
-    setProfile(null);
-    setLoginNotice(notice);
-  }, []);
-
-  // El backend rechazó el token (401): se vuelve al login con un aviso.
-  useEffect(
-    () => session.onExpired(() => endSession('Su sesión expiró o ya no es válida. Inicie sesión nuevamente.')),
-    [endSession]
+  const endSession = useCallback(
+    (notice: string | null) => {
+      session.clear();
+      // Los catálogos guardados son de esta sesión: el próximo usuario los vuelve a pedir.
+      limpiarCatalogos();
+      setCurrent(null);
+      setProfile(null);
+      setServerError(null);
+      setLoginNotice(notice);
+      navigate(LOGIN_PATH);
+    },
+    [navigate]
   );
+
+  // El backend rechazó el pedido (401 o 403): logout y vuelta al login con el motivo.
+  useEffect(() => session.onExpired((motivo) => endSession(motivo)), [endSession]);
 
   // El token vence a la hora indicada por el backend: la sesión se cierra sola.
   useEffect(() => {
@@ -172,19 +214,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const canAccess = (module: MainModule) => rolesCanAccess(user.roles, module);
   const hasRole = (rol: RolUsuario) => user.roles.includes(rol);
 
-  // Un usuario nunca queda parado en un módulo que no le corresponde.
+  // Un usuario nunca queda parado en un módulo que no le corresponde (también lo controla resolveRoute).
   const setActiveModule = (module: MainModule) => {
-    if (canAccess(module)) setActiveModuleState(module);
+    if (canAccess(module)) navigate(MODULE_PATHS[module]);
   };
+  const goHome = () => navigate(MODULE_PATHS[homeModule(user.roles)]);
 
   const login = async (username: string, password: string): Promise<LoginResult> => {
     try {
       const token = await authApi.login({ username: username.trim(), password });
+      limpiarCatalogos();
       const nueva = session.start(token);
       setCurrent(nueva);
       setLoginNotice(null);
+      setServerError(null);
       setAvatarUrl(readAvatar(nueva.username));
-      setActiveModuleState(homeModule(nueva.roles));
+      // La ruta que se había pedido antes del login se respeta si el rol la permite (resolveRoute).
       // El perfil (/auth/me) lo pide el efecto que observa la sesión.
       setProfile(null);
       return { ok: true };
@@ -228,7 +273,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         theme,
         setThemeColor,
         toggleDarkMode,
+        route,
         activeModule,
+        goHome,
+        serverError,
+        retryAfterServerError,
+        retryKey,
         setActiveModule,
         ventaSubTab,
         setVentaSubTab,

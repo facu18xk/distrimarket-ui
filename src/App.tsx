@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { HeaderNavbar, Footer, ConfirmProvider } from './components/common';
+import { HeaderNavbar, Footer, ConfirmProvider, ErrorBoundary, ErrorPage } from './components/common';
 import { LoginView } from './components/auth';
 import { ContactModal, AccountConfigModal } from './components/modals';
 import { StockModuleView } from './components/stock';
@@ -9,7 +9,7 @@ import { VentaModuleView } from './components/venta';
 import { AdministracionModuleView } from './components/administracion';
 
 const MainLayout: React.FC = () => {
-  const { isLoggedIn, activeModule, canAccess } = useApp();
+  const { isLoggedIn, route, activeModule, canAccess, goHome, serverError, retryAfterServerError, retryKey } = useApp();
 
   if (!isLoggedIn) {
     return (
@@ -25,14 +25,21 @@ const MainLayout: React.FC = () => {
       <HeaderNavbar />
 
       <main className="flex-1 flex flex-col print:block">
-        {/* Autorización: un módulo solo se dibuja si el rol del usuario lo incluye. */}
-        {canAccess(activeModule) && (
-          <>
-            {activeModule === 'stock' && <StockModuleView />}
-            {activeModule === 'compra' && <CompraModuleView />}
-            {activeModule === 'venta' && <VentaModuleView />}
-            {activeModule === 'administracion' && <AdministracionModuleView />}
-          </>
+        {serverError ? (
+          // El backend falló al cargar datos: página 500 con la opción de reintentar.
+          <ErrorPage code={500} detail={serverError} onRetry={retryAfterServerError} onHome={goHome} />
+        ) : route.kind === 'notFound' ? (
+          <ErrorPage code={404} onHome={goHome} />
+        ) : (
+          // Autorización: un módulo solo se dibuja si alguno de los roles del usuario lo incluye.
+          canAccess(activeModule) && (
+            <ErrorBoundary key={`${activeModule}-${retryKey}`} onHome={goHome}>
+              {activeModule === 'stock' && <StockModuleView />}
+              {activeModule === 'compra' && <CompraModuleView />}
+              {activeModule === 'venta' && <VentaModuleView />}
+              {activeModule === 'administracion' && <AdministracionModuleView />}
+            </ErrorBoundary>
+          )
         )}
       </main>
 

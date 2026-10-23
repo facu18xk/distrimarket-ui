@@ -47,7 +47,7 @@ export const FacturasCompraPanel: React.FC = () => {
   };
 
   const columns: Column<FacturaCompraResponseDTO>[] = [
-    { header: 'Número', cell: (f) => (f.numeroFactura ? formatNumeroFactura(f.numeroFactura) : `#${f.idFacturaCompra}`), className: 'font-bold text-slate-900' },
+    { header: 'Número', cell: (f) => (f.numeroFactura ? formatNumeroFactura(f.numeroFactura) : '—'), className: 'font-bold text-slate-900' },
     { header: 'Fecha', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
     { header: 'Proveedor', cell: (f) => nombreProveedor(f.proveedor) },
     { header: 'Condición', cell: (f) => (f.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'), className: 'text-slate-600' },
