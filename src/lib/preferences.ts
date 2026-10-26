@@ -28,3 +28,9 @@ export function preferredId(key: PreferenceKey, available: number[]): number | '
 export function empleadoPorDefecto(idPropio: number | undefined, available: number[]): number | '' {
   return idPropio && available.includes(idPropio) ? idPropio : preferredId('empleado', available);
 }
+
+/** Id recordado en este navegador (o '' si no hay). */
+export function recordado(key: PreferenceKey): number | '' {
+  const saved = Number(localStorage.getItem(storageKey(key)));
+  return saved > 0 ? saved : '';
+}

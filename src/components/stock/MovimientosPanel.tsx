@@ -6,6 +6,8 @@ import {
   FormField,
   LineItemsEditor,
   ModalDialog,
+  DepositoBuscador,
+  EmpleadoPicker,
   PagedTable,
   StatusBadge,
   fieldClass,
@@ -13,13 +15,11 @@ import {
 } from '../common';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useLocalPagedResource } from '../../hooks';
-import { inventarioApi } from '../../services';
-import { newLineItem, type LineItem } from '../../lib/lineItems';
-import { empleadoPorDefecto, preferredId, rememberId } from '../../lib/preferences';
-import { useApp } from '../../context/AppContext';
-import type { AjusteStockResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
-import { cargarAjustes, cargarCatalogosStock, cargarTransferencias } from './catalogos';
+import { useAsyncAction, useAsyncData, useEmpleadoPorDefecto, usePagedResource } from '../../hooks';
+import { catalogos, depositosActivos, inventarioApi } from '../../services';
+import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
+import { preferredId, rememberId } from '../../lib/preferences';
+import type { AjusteStockResponseDTO, DepositoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
 
 type Movimiento = 'ajuste' | 'transferencia';
 
@@ -48,13 +48,29 @@ const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
   { header: 'Estado', cell: (t) => <StatusBadge status={t.estado === 'COMPLETADO' ? 'Completado' : t.estado} /> },
 ];
 
-const buscarAjuste = (a: AjusteStockResponseDTO) => `${a.nombreDeposito} ${a.motivo} ${a.nombreEmpleado} ${resumen(a.detalles)}`;
-const buscarTransferencia = (t: TransferenciaStockResponseDTO) =>
-  `${t.nombreDepositoOrigen} ${t.nombreDepositoDestino} ${t.nombreEmpleado} ${t.observacion ?? ''} ${resumen(t.detalles)}`;
+type FiltroAjustes = { depositoId?: number };
+type FiltroTransferencias = { depositoOrigenId?: number };
+
+/** Filtro por depósito: el mismo buscador de los formularios, sobre el catálogo chico de la sesión. */
+const FiltroDeposito: React.FC<{ value: DepositoResponseDTO | null; onChange: (deposito: DepositoResponseDTO | null) => void; depositos: DepositoResponseDTO[] | null; titulo: string }> = ({
+  value,
+  onChange,
+  depositos,
+  titulo,
+}) => (
+  <div className="w-full sm:w-64">
+    <DepositoBuscador depositos={depositos ?? []} value={value} onChange={onChange} placeholder={`${titulo}: todos (buscar...)`} />
+  </div>
+);
 
 /** Ajustes: entradas y salidas de un depósito que no son compras ni ventas (merma, conteo, vencimiento). */
 export const AjustesPanel: React.FC = () => {
-  const ajustes = useLocalPagedResource(cargarAjustes, buscarAjuste);
+  const depositos = useAsyncData(catalogos.depositos);
+  const [filtro, setFiltro] = useState<DepositoResponseDTO | null>(null);
+  const ajustes = usePagedResource<AjusteStockResponseDTO, FiltroAjustes>(inventarioApi.ajustes.list, {
+    filters: filtro ? { depositoId: filtro.id } : undefined,
+    sort: 'fechaCreacion,desc',
+  });
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -64,12 +80,14 @@ export const AjustesPanel: React.FC = () => {
         columns={columnasAjustes}
         rowKey={(a) => a.id}
         label="ajustes"
-        searchPlaceholder="Buscar por depósito, motivo, producto o responsable..."
         filters={
-          <Button variant="emerald" onClick={() => setFormOpen(true)}>
-            <Plus />
-            <span>Nuevo ajuste</span>
-          </Button>
+          <>
+            <FiltroDeposito value={filtro} onChange={setFiltro} depositos={depositos.data} titulo="Depósito" />
+            <Button variant="emerald" onClick={() => setFormOpen(true)}>
+              <Plus />
+              <span>Nuevo ajuste</span>
+            </Button>
+          </>
         }
       />
       <MovimientoFormModal tipo="ajuste" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={ajustes.reload} />
@@ -79,7 +97,12 @@ export const AjustesPanel: React.FC = () => {
 
 /** Transferencias: mueven stock de un depósito a otro. */
 export const TransferenciasPanel: React.FC = () => {
-  const transferencias = useLocalPagedResource(cargarTransferencias, buscarTransferencia);
+  const depositos = useAsyncData(catalogos.depositos);
+  const [origen, setOrigen] = useState<DepositoResponseDTO | null>(null);
+  const transferencias = usePagedResource<TransferenciaStockResponseDTO, FiltroTransferencias>(inventarioApi.transferencias.list, {
+    filters: origen ? { depositoOrigenId: origen.id } : undefined,
+    sort: 'fechaCreacion,desc',
+  });
   const [formOpen, setFormOpen] = useState(false);
 
   return (
@@ -89,12 +112,14 @@ export const TransferenciasPanel: React.FC = () => {
         columns={columnasTransferencias}
         rowKey={(t) => t.id}
         label="transferencias"
-        searchPlaceholder="Buscar por depósito, producto o responsable..."
         filters={
-          <Button variant="emerald" onClick={() => setFormOpen(true)}>
-            <Plus />
-            <span>Nueva transferencia</span>
-          </Button>
+          <>
+            <FiltroDeposito value={origen} onChange={setOrigen} depositos={depositos.data} titulo="Origen" />
+            <Button variant="emerald" onClick={() => setFormOpen(true)}>
+              <Plus />
+              <span>Nueva transferencia</span>
+            </Button>
+          </>
         }
       />
       <MovimientoFormModal tipo="transferencia" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={transferencias.reload} />
@@ -122,7 +147,7 @@ const TEXTOS = {
 } as const;
 
 const MovimientoFormModal: React.FC<MovimientoFormProps & { isOpen: boolean }> = ({ isOpen, ...props }) => (
-  <ModalDialog isOpen={isOpen} onClose={props.onClose} title={TEXTOS[props.tipo].titulo} subtitle={TEXTOS[props.tipo].subtitulo} maxWidth="2xl">
+  <ModalDialog isOpen={isOpen} onClose={props.onClose} title={TEXTOS[props.tipo].titulo} subtitle={TEXTOS[props.tipo].subtitulo} maxWidth="4xl">
     <MovimientoForm {...props} />
   </ModalDialog>
 );
@@ -130,65 +155,55 @@ const MovimientoFormModal: React.FC<MovimientoFormProps & { isOpen: boolean }> =
 /**
  * Formulario cabecera-detalle común a ajustes y transferencias: cambia la
  * cabecera (un depósito y un tipo, o dos depósitos) y el detalle es el mismo.
+ * Depósitos: catálogo chico de la sesión. Responsable y productos: selectores paginados.
  */
 const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved }) => {
-  const { user } = useApp();
-  const catalogos = useAsyncData(cargarCatalogosStock);
+  const depositos = useAsyncData(depositosActivos);
   const guardar = useAsyncAction();
-  const [idDeposito, setIdDeposito] = useState<number | ''>('');
-  const [idDestino, setIdDestino] = useState<number | ''>('');
-  const [idEmpleado, setIdEmpleado] = useState<number | ''>('');
+  // undefined = todavía no se eligió: se propone el último depósito usado.
+  const [origenElegido, setOrigenElegido] = useState<DepositoResponseDTO | null | undefined>(undefined);
+  const [destino, setDestino] = useState<DepositoResponseDTO | null>(null);
+  const [empleado, setEmpleado] = useEmpleadoPorDefecto();
   const [tipoAjuste, setTipoAjuste] = useState<TipoAjuste>('NEGATIVO');
   const [texto, setTexto] = useState('');
   const [lineas, setLineas] = useState<LineItem[]>([newLineItem()]);
 
-  if (catalogos.error) return <FeedbackBanner>{catalogos.error}</FeedbackBanner>;
-  if (!catalogos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
-  const { depositos, empleados, productos } = catalogos.data;
+  if (depositos.error) return <FeedbackBanner>{depositos.error}</FeedbackBanner>;
+  if (!depositos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
+  const lista = depositos.data;
 
-  const deposito = idDeposito !== '' ? idDeposito : preferredId('deposito', depositos.map((d) => d.id));
-  const empleado = idEmpleado !== '' ? idEmpleado : empleadoPorDefecto(user.idEmpleado, empleados.map((e) => e.id));
-  const mismoDeposito = tipo === 'transferencia' && idDestino !== '' && idDestino === deposito;
+  const recordado = preferredId('deposito', lista.map((d) => d.id));
+  const deposito = origenElegido !== undefined ? origenElegido : (lista.find((d) => d.id === recordado) ?? null);
+  const mismoDeposito = tipo === 'transferencia' && destino !== null && deposito !== null && destino.id === deposito.id;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mismoDeposito) return;
-    const detalles = lineas.map((l) => ({ idProducto: Number(l.idProducto), cantidad: l.cantidad }));
+    if (mismoDeposito || !empleado || !deposito) return;
+    const detalles = lineasADetalle(lineas);
     const ok = await guardar.run(() =>
       tipo === 'ajuste'
-        ? inventarioApi.ajustes.create({ idDeposito: Number(deposito), idEmpleado: Number(empleado), motivo: texto.trim(), tipoAjuste, detalles })
+        ? inventarioApi.ajustes.create({ idDeposito: deposito.id, idEmpleado: empleado.id, motivo: texto.trim(), tipoAjuste, detalles })
         : inventarioApi.transferencias.create({
-            idDepositoOrigen: Number(deposito),
-            idDepositoDestino: Number(idDestino),
-            idEmpleado: Number(empleado),
+            idDepositoOrigen: deposito.id,
+            idDepositoDestino: destino!.id,
+            idEmpleado: empleado.id,
             observacion: texto.trim() || undefined,
             detalles,
           })
     );
     if (ok) {
-      rememberId('deposito', deposito);
-      rememberId('empleado', empleado);
+      rememberId('deposito', deposito.id);
+      rememberId('empleado', empleado.id);
       onSaved();
       onClose();
     }
   };
 
-  const selectorDeposito = (valor: number | '', onChange: (id: number | '') => void, conVacio: boolean) => (
-    <select className={fieldClass} required value={valor} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}>
-      {conVacio && <option value="">Seleccionar...</option>}
-      {depositos.map((d) => (
-        <option key={d.id} value={d.id}>
-          {d.nombre}
-        </option>
-      ))}
-    </select>
-  );
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <FormField label={tipo === 'ajuste' ? 'Depósito' : 'Depósito de origen'} required>
-          {selectorDeposito(deposito, setIdDeposito, false)}
+          <DepositoBuscador required depositos={lista} value={deposito} onChange={setOrigenElegido} />
         </FormField>
 
         {tipo === 'ajuste' ? (
@@ -200,18 +215,12 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
           </FormField>
         ) : (
           <FormField label="Depósito de destino" required>
-            {selectorDeposito(idDestino, setIdDestino, true)}
+            <DepositoBuscador required depositos={lista} value={destino} onChange={setDestino} excluir={deposito ? [deposito.id] : []} />
           </FormField>
         )}
 
         <FormField label="Responsable" required>
-          <select className={fieldClass} required value={empleado} onChange={(e) => setIdEmpleado(Number(e.target.value))}>
-            {empleados.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.persona.nombreCompleto} ({emp.cargo})
-              </option>
-            ))}
-          </select>
+          <EmpleadoPicker required value={empleado} onChange={setEmpleado} />
         </FormField>
 
         <FormField label={tipo === 'ajuste' ? 'Motivo' : 'Observación'} required={tipo === 'ajuste'}>
@@ -228,7 +237,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
 
       {mismoDeposito && <FeedbackBanner>El depósito de origen y el de destino no pueden ser el mismo.</FeedbackBanner>}
 
-      <LineItemsEditor lines={lineas} onChange={setLineas} productos={productos} price="sin" />
+      <LineItemsEditor lines={lineas} onChange={setLineas} price="sin" />
 
       {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}
 

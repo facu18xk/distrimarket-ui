@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { Plus, Save } from 'lucide-react';
-import { ActionButtons, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, fieldClass, type Column } from '../common';
+import { ActionButtons, DepositoBuscador, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, ProductoPicker, fieldClass, type Column } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useLocalPagedResource, useRemove } from '../../hooks';
-import { inventarioApi } from '../../services';
+import { useAsyncAction, useAsyncData, usePagedResource, useRemove } from '../../hooks';
+import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { preferredId, rememberId } from '../../lib/preferences';
-import type { StockDepositoResponseDTO } from '../../types/api';
-import { cargarCatalogosStock, cargarExistencias } from './catalogos';
+import type { DepositoResponseDTO, ProductoResponseDTO, StockDepositoResponseDTO } from '../../types/api';
 
-const textoDeBusqueda = (s: StockDepositoResponseDTO) => `${s.nombreProducto ?? ''} ${s.nombreDeposito ?? ''}`;
+type FiltrosExistencia = { depositoId?: number };
 
-/** Existencias: cuántas unidades de cada producto hay en cada depósito. */
+/** Existencias: cuántas unidades de cada producto hay en cada depósito (10 por página, filtradas por depósito en el backend). */
 export const ExistenciasPanel: React.FC = () => {
-  const existencias = useLocalPagedResource(cargarExistencias, textoDeBusqueda);
+  const depositos = useAsyncData(catalogos.depositos);
+  const [filtroDeposito, setFiltroDeposito] = useState<DepositoResponseDTO | null>(null);
+  const existencias = usePagedResource<StockDepositoResponseDTO, FiltrosExistencia>(inventarioApi.stock.list, {
+    filters: filtroDeposito ? { depositoId: filtroDeposito.id } : undefined,
+  });
   const baja = useRemove(existencias.reload);
   const [formOpen, setFormOpen] = useState(false);
   const [enEdicion, setEnEdicion] = useState<StockDepositoResponseDTO | null>(null);
@@ -49,19 +52,28 @@ export const ExistenciasPanel: React.FC = () => {
 
   return (
     <>
-      {baja.error && <FeedbackBanner className="mb-4">{baja.error}</FeedbackBanner>}
+      {baja.error && <FeedbackBanner className="mb-3">{baja.error}</FeedbackBanner>}
 
       <PagedTable
         resource={existencias}
         columns={columns}
         rowKey={(s) => s.id}
         label="existencias"
-        searchPlaceholder="Buscar por producto o depósito..."
         filters={
-          <Button variant="emerald" onClick={() => abrir(null)}>
-            <Plus />
-            <span>Añadir existencia</span>
-          </Button>
+          <>
+            <div className="w-full sm:w-64">
+              <DepositoBuscador
+                depositos={depositos.data ?? []}
+                value={filtroDeposito}
+                onChange={setFiltroDeposito}
+                placeholder="Todos los depósitos (buscar...)"
+              />
+            </div>
+            <Button variant="emerald" onClick={() => abrir(null)}>
+              <Plus />
+              <span>Añadir existencia</span>
+            </Button>
+          </>
         }
       />
 
@@ -89,59 +101,51 @@ interface ExistenciaFormProps {
 }
 
 const ExistenciaForm: React.FC<ExistenciaFormProps> = ({ existencia, onClose, onSaved }) => {
-  const catalogos = useAsyncData(cargarCatalogosStock);
+  const depositos = useAsyncData(depositosActivos);
   const guardar = useAsyncAction();
-  const [idDeposito, setIdDeposito] = useState<number | ''>(existencia?.idDeposito ?? '');
-  const [idProducto, setIdProducto] = useState<number | ''>(existencia?.idProducto ?? '');
+  // undefined = todavía no se eligió: se propone el de la existencia o el último usado.
+  const [elegido, setElegido] = useState<DepositoResponseDTO | null | undefined>(undefined);
+  const [producto, setProducto] = useState<ProductoResponseDTO | null>(null);
   const [cantidad, setCantidad] = useState(String(existencia?.cantidad ?? ''));
 
-  if (catalogos.error) return <FeedbackBanner>{catalogos.error}</FeedbackBanner>;
-  if (!catalogos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
-  const { depositos, productos } = catalogos.data;
-  const deposito = idDeposito !== '' ? idDeposito : preferredId('deposito', depositos.map((d) => d.id));
+  if (depositos.error) return <FeedbackBanner>{depositos.error}</FeedbackBanner>;
+  if (!depositos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
+  const propuesto = existencia ? existencia.idDeposito : preferredId('deposito', depositos.data.map((d) => d.id));
+  const deposito =
+    elegido !== undefined
+      ? elegido
+      : (depositos.data.find((d) => d.id === propuesto) ??
+        (existencia ? { id: existencia.idDeposito, nombre: existencia.nombreDeposito ?? `Depósito #${existencia.idDeposito}`, estado: true } : null));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const request = { idDeposito: Number(deposito), idProducto: Number(idProducto), cantidad: Number(cantidad) };
+    const idProducto = existencia ? existencia.idProducto : producto?.id;
+    if (!idProducto || !deposito) return;
+    const request = { idDeposito: deposito.id, idProducto, cantidad: Number(cantidad) };
     const ok = await guardar.run(() =>
       existencia ? inventarioApi.stock.update(existencia.id, request) : inventarioApi.stock.create(request)
     );
     if (ok) {
-      rememberId('deposito', deposito);
+      rememberId('deposito', deposito.id);
       onSaved();
       onClose();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <FormField label="Depósito" required>
-        <select className={fieldClass} required disabled={Boolean(existencia)} value={deposito} onChange={(e) => setIdDeposito(Number(e.target.value))}>
-          {depositos.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.nombre}
-            </option>
-          ))}
-        </select>
+        <DepositoBuscador required disabled={Boolean(existencia)} depositos={depositos.data} value={deposito} onChange={setElegido} />
       </FormField>
       <FormField label="Producto" required>
-        <select
-          className={fieldClass}
-          required
-          disabled={Boolean(existencia)}
-          value={idProducto}
-          onChange={(e) => setIdProducto(e.target.value === '' ? '' : Number(e.target.value))}
-        >
-          <option value="">Seleccionar producto...</option>
-          {productos.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
+        {existencia ? (
+          <input className={fieldClass} disabled value={existencia.nombreProducto ?? `Producto #${existencia.idProducto}`} />
+        ) : (
+          <ProductoPicker required mostrarPrecio={false} value={producto} onChange={setProducto} />
+        )}
       </FormField>
       <FormField label="Cantidad" required>
-        <input className={fieldClass} type="number" min={0} required value={cantidad} onChange={(e) => setCantidad(e.target.value)} autoFocus />
+        <input className={fieldClass} type="number" min={0} required value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
       </FormField>
 
       {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}

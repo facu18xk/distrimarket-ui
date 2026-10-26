@@ -23,7 +23,7 @@ export const LoginView: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-100">
       {/* Top Banner matching Figma */}
       <header
-        className="w-full py-3.5 px-6 shadow-md flex items-center justify-between"
+        className="sobre-primario w-full py-3.5 px-6 shadow-md flex items-center justify-between"
         style={{ backgroundColor: theme.primaryHex }}
       >
         <div className="flex items-center space-x-2">
@@ -46,7 +46,7 @@ export const LoginView: React.FC = () => {
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
           <div className="text-center space-y-2">
             <div
-              className="w-12 h-12 mx-auto rounded-2xl flex items-center justify-center text-white shadow-md"
+              className="sobre-primario w-12 h-12 mx-auto rounded-2xl flex items-center justify-center text-white shadow-md"
               style={{ backgroundColor: theme.primaryHex }}
             >
               <ShoppingCart className="w-6 h-6" />
@@ -108,7 +108,7 @@ export const LoginView: React.FC = () => {
               type="submit"
               disabled={loading}
               style={{ backgroundColor: theme.primaryHex }}
-              className="w-full py-2.5 px-4 text-white font-bold rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm disabled:opacity-60"
+              className="sobre-primario w-full py-2.5 px-4 text-white font-bold rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 text-sm disabled:opacity-60"
             >
               <span>{loading ? 'Validando...' : 'Iniciar sesión'}</span>
               <ArrowRight className="w-4 h-4" />

@@ -30,7 +30,7 @@ export const AdministracionModuleView: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-7xl w-full mx-auto">
+    <div className="flex-1 flex flex-col p-3 sm:p-4 max-w-7xl w-full mx-auto">
       <SubTabs tabs={TABS} value={adminSubTab} onChange={setAdminSubTab} />
 
       {adminSubTab === 'usuarios' && <UsuariosPanel />}

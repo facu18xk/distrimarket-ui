@@ -1,11 +1,10 @@
 import { formatNumeroFactura } from '../../lib/paraguay';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ActionButtons, FeedbackBanner, PagedTable, StatusBadge, fieldClass, type Column } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncData, usePagedResource, useRemove } from '../../hooks';
-import { catalogos, ventasApi, type FacturaVentaFilters } from '../../services';
-import { indexar } from '../../lib/catalogCache';
+import { usePagedResource, usePorId, useRemove } from '../../hooks';
+import { inventarioApi, ventasApi, type FacturaVentaFilters } from '../../services';
 import { formatDate, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import type { EstadoFacturaVenta, FacturaVentaResumenDTO } from '../../types/api';
@@ -15,7 +14,8 @@ import { useApp } from '../../context/AppContext';
 
 /**
  * Listado de facturas: el backend devuelve solo cabeceras (cliente con nombre, vendedor por id).
- * El nombre del vendedor sale del catálogo de empleados, pedido una sola vez para toda la tabla.
+ * El nombre del vendedor se pide por id, una sola vez por cada vendedor distinto de la página
+ * (el backend lo responde desde Redis); no se carga la lista entera de empleados.
  * La factura completa, con sus líneas, se pide recién al abrirla.
  */
 export const FacturasPanel: React.FC = () => {
@@ -25,8 +25,7 @@ export const FacturasPanel: React.FC = () => {
     filters: estado ? { estado } : undefined,
     sort: 'id,desc',
   });
-  const empleados = useAsyncData(catalogos.empleados);
-  const empleadoPorId = useMemo(() => indexar(empleados.data, (e) => e.id), [empleados.data]);
+  const empleadoPorId = usePorId(inventarioApi.empleados.ref, facturas.items.map((f) => f.idEmpleado));
 
   const baja = useRemove(facturas.reload);
   const [formOpen, setFormOpen] = useState(false);
@@ -77,7 +76,7 @@ export const FacturasPanel: React.FC = () => {
 
   return (
     <>
-      {baja.error && <FeedbackBanner className="mb-4">{baja.error}</FeedbackBanner>}
+      {baja.error && <FeedbackBanner className="mb-3">{baja.error}</FeedbackBanner>}
 
       <PagedTable
         resource={facturas}
@@ -90,7 +89,7 @@ export const FacturasPanel: React.FC = () => {
         filters={
           <>
             <select
-              className={cn(fieldClass, 'w-auto bg-white h-10')}
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
               value={estado}
               onChange={(e) => setEstado(e.target.value as EstadoFacturaVenta | '')}
               title="Filtrar por estado"

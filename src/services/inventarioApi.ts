@@ -21,7 +21,7 @@ const transferencias = readResource<TransferenciaStockResponseDTO>('/inventario/
 
 /** Microservicio de inventario (distrimarket-ms-featureB), a través del gateway. */
 export const inventarioApi = {
-  productos: crudResource<ProductoResponseDTO, ProductoRequestDTO, { categoriaId?: number; marcaId?: number }>('/inventario/productos', 'productos'),
+  productos: crudResource<ProductoResponseDTO, ProductoRequestDTO, { categoriaId?: number; marcaId?: number }>('/inventario/productos'),
   categorias: readResource<CategoriaResponseDTO>('/inventario/categorias'),
   marcas: readResource<MarcaResponseDTO>('/inventario/marcas'),
   depositos: readResource<DepositoResponseDTO>('/inventario/depositos'),

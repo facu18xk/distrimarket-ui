@@ -1,18 +1,20 @@
 import React, { useCallback, useState } from 'react';
 import { FileDown } from 'lucide-react';
-import { DataTable, FeedbackBanner, FormField, fieldClass, type Column } from '../common';
+import { ClienteSelector, DataTable, EmpleadoPicker, FeedbackBanner, FormField, fieldClass, type Column } from '../common';
 import { Button } from '../ui/button';
 import { useApp } from '../../context/AppContext';
 import { useAsyncData } from '../../hooks';
-import { catalogos, ventasApi, type FacturaVentaFilters } from '../../services';
-import { conCache, indexar } from '../../lib/catalogCache';
+import { catalogos, inventarioApi, ventasApi, type FacturaVentaFilters } from '../../services';
+import { indexar } from '../../lib/catalogCache';
+import { enTandas } from '../../lib/tandas';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { cn } from '../../lib/utils';
-import type { EstadoFacturaVenta, FacturaVentaResumenDTO } from '../../types/api';
+import type { ClienteResponseDTO, EmpleadoResponseDTO, EstadoFacturaVenta, FacturaVentaResumenDTO } from '../../types/api';
 
 /** Tope de facturas que suma el reporte; si el período tiene más, se avisa. */
 const MAX_FACTURAS = 500;
-const POR_PAGINA = 100;
+/** Cabeceras por pedido: el reporte las recorre de a páginas, nunca todas de una vez. */
+const POR_PAGINA = 50;
 
 interface Filtros {
   fechaDesde: string;
@@ -33,54 +35,31 @@ interface Reporte {
   incompleto: boolean;
   emitidas: number;
   totalVendido: number;
-  totalIva: number;
   anuladas: number;
   totalAnulado: number;
   porDia: Grupo[];
-  porProducto: Grupo[];
   porCliente: Grupo[];
   porVendedor: Grupo[];
   porMedioPago: Grupo[];
 }
 
-/** Suma facturas (o unidades) y montos bajo un mismo nombre. */
-function agrupar<T>(items: T[], nombre: (item: T) => string, cantidad: (item: T) => number, total: (item: T) => number): Grupo[] {
+/** Suma facturas y montos bajo un mismo nombre. */
+function agrupar<T>(items: T[], nombre: (item: T) => string, total: (item: T) => number): Grupo[] {
   const grupos = new Map<string, Grupo>();
   for (const item of items) {
     const clave = nombre(item);
     const grupo = grupos.get(clave) ?? { nombre: clave, cantidad: 0, total: 0 };
-    grupos.set(clave, { nombre: clave, cantidad: grupo.cantidad + cantidad(item), total: grupo.total + total(item) });
+    grupos.set(clave, { nombre: clave, cantidad: grupo.cantidad + 1, total: grupo.total + total(item) });
   }
   return [...grupos.values()];
 }
 
 const porTotal = (a: Grupo, b: Grupo) => b.total - a.total;
 
-/** Líneas pedidas en paralelo como máximo, para no saturar al backend. */
-const PEDIDOS_SIMULTANEOS = 6;
-
 /**
- * Factura completa (con líneas) para el ranking de productos. Cada una se pide una sola vez por
- * sesión: volver a generar el reporte o cambiar un filtro reutiliza las ya traídas.
- */
-const facturaCompleta = (id: number) => conCache(`factura-${id}`, () => ventasApi.facturas.get(id), 5 * 60 * 1000);
-
-async function enParalelo<T, R>(items: T[], tarea: (item: T) => Promise<R>): Promise<R[]> {
-  const resultados: R[] = new Array(items.length);
-  let siguiente = 0;
-  const trabajador = async () => {
-    while (siguiente < items.length) {
-      const indice = siguiente++;
-      resultados[indice] = await tarea(items[indice]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(PEDIDOS_SIMULTANEOS, items.length) }, trabajador));
-  return resultados;
-}
-
-/**
- * El backend filtra por fecha, estado, cliente, vendedor y depósito y devuelve cabeceras;
- * aquí se agrupa. Los nombres de inventario y de medios de pago salen de los catálogos en caché.
+ * El backend filtra por fecha, estado, cliente, vendedor y depósito y devuelve cabeceras, que
+ * aquí se agrupan. Solo se usan cabeceras: no se pide cada factura por separado. El nombre de
+ * cada vendedor distinto se pide una vez por id; los medios de pago salen del catálogo chico.
  */
 async function cargarReporte(filtros: Filtros): Promise<Reporte> {
   const consulta: FacturaVentaFilters = {
@@ -106,71 +85,55 @@ async function cargarReporte(filtros: Filtros): Promise<Reporte> {
   const emitidas = facturas.filter((f) => f.estado === 'EMITIDA');
   const anuladas = facturas.filter((f) => f.estado === 'ANULADA');
 
-  const [completas, productos, empleados, mediosPago] = await Promise.all([
-    enParalelo(emitidas, (f) => facturaCompleta(f.idFacturaVenta)),
-    catalogos.productos(),
-    catalogos.empleados(),
+  const idsVendedores = [...new Set(emitidas.map((f) => f.idEmpleado).filter((id): id is number => Boolean(id)))];
+  const [vendedores, mediosPago] = await Promise.all([
+    enTandas(idsVendedores, inventarioApi.empleados.ref),
     catalogos.mediosPago(),
   ]);
-  const productoPorId = indexar(productos, (p) => p.id);
-  const empleadoPorId = indexar(empleados, (e) => e.id);
+  const vendedorPorId = new Map(vendedores.filter((par): par is readonly [number, EmpleadoResponseDTO] => par[1] !== null));
   const medioPagoPorId = indexar(mediosPago, (m) => m.idMedioPago);
-  const lineas = completas.flatMap((f) => f.detalles);
 
   return {
     incompleto: pagina <= totalPaginas,
     emitidas: emitidas.length,
     totalVendido: emitidas.reduce((suma, f) => suma + f.totalGeneral, 0),
-    totalIva: completas.reduce((suma, f) => suma + f.totalIva, 0),
     anuladas: anuladas.length,
     totalAnulado: anuladas.reduce((suma, f) => suma + f.totalGeneral, 0),
-    porDia: agrupar(emitidas, (f) => f.fechaEmision, () => 1, (f) => f.totalGeneral).sort((a, b) => a.nombre.localeCompare(b.nombre)),
-    porProducto: agrupar(lineas, (d) => productoPorId.get(d.idProducto)?.nombre ?? 'Producto dado de baja', (d) => d.cantidad, (d) => d.subtotal),
-    porCliente: agrupar(emitidas, (f) => f.clienteNombre, () => 1, (f) => f.totalGeneral).sort(porTotal),
+    porDia: agrupar(emitidas, (f) => f.fechaEmision, (f) => f.totalGeneral).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    porCliente: agrupar(emitidas, (f) => f.clienteNombre, (f) => f.totalGeneral).sort(porTotal),
     porVendedor: agrupar(
       emitidas,
-      (f) => (f.idEmpleado ? empleadoPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? 'Sin vendedor',
-      () => 1,
+      (f) => (f.idEmpleado ? vendedorPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? 'Sin vendedor',
       (f) => f.totalGeneral
     ).sort(porTotal),
     porMedioPago: agrupar(
       emitidas,
       (f) => (f.idMedioPago ? medioPagoPorId.get(f.idMedioPago)?.nombre : undefined) ?? '—',
-      () => 1,
       (f) => f.totalGeneral
     ).sort(porTotal),
   };
 }
 
-async function cargarOpciones() {
-  const [clientes, empleados, depositos] = await Promise.all([
-    ventasApi.clientes.all(),
-    catalogos.empleados(),
-    catalogos.depositos(),
-  ]);
-  return { clientes, empleados, depositos };
-}
-
 const primerDiaDelMes = () => `${todayIso().slice(0, 8)}01`;
 
 const Indicador: React.FC<{ titulo: string; valor: string; nota?: string }> = ({ titulo, valor, nota }) => (
-  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs print:shadow-none">
+  <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs print:shadow-none">
     <span className="text-[11px] font-semibold text-slate-500 uppercase">{titulo}</span>
-    <p className="text-xl font-black text-slate-900 mt-1.5">{valor}</p>
-    {nota && <p className="text-xs text-slate-500 mt-1">{nota}</p>}
+    <p className="text-lg font-black text-slate-900 mt-1">{valor}</p>
+    {nota && <p className="text-xs text-slate-500 mt-0.5">{nota}</p>}
   </div>
 );
 
-/** Columnas de un ranking: nombre, cantidad (facturas o unidades) y total. */
-const columnas = (nombre: string, cantidad: string, mostrarNombre: (g: Grupo) => string = (g) => g.nombre): Column<Grupo>[] => [
+/** Columnas de un ranking: nombre, facturas y total. */
+const columnas = (nombre: string, mostrarNombre: (g: Grupo) => string = (g) => g.nombre): Column<Grupo>[] => [
   { header: nombre, cell: mostrarNombre, className: 'font-bold text-slate-900' },
-  { header: cantidad, align: 'center', cell: (g) => g.cantidad },
+  { header: 'Facturas', align: 'center', cell: (g) => g.cantidad },
   { header: 'Total', align: 'right', cell: (g) => formatMoney(g.total), className: 'font-black text-slate-900' },
 ];
 
 const Seccion: React.FC<{ titulo: string; filas: Grupo[]; columns: Column<Grupo>[] }> = ({ titulo, filas, columns }) => (
   <div className="break-inside-avoid">
-    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">{titulo}</h4>
+    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">{titulo}</h4>
     <DataTable columns={columns} rows={filas} rowKey={(g) => g.nombre} emptyMessage="Sin ventas con estos filtros." />
   </div>
 );
@@ -178,9 +141,8 @@ const Seccion: React.FC<{ titulo: string; filas: Grupo[]; columns: Column<Grupo>
 const idONada = (value: string): number | '' => (value === '' ? '' : Number(value));
 
 /**
- * Reporte de ventas: totales, anulaciones, ventas por día y rankings de
- * productos, clientes, vendedores y medios de pago, con filtros.
- * "Exportar a PDF" usa la impresión del navegador (Guardar como PDF).
+ * Reporte de ventas: totales, anulaciones, ventas por día y rankings de clientes, vendedores y
+ * medios de pago, con filtros. "Exportar a PDF" usa la impresión del navegador (Guardar como PDF).
  */
 export const ReportesPanel: React.FC = () => {
   const { user } = useApp();
@@ -192,26 +154,22 @@ export const ReportesPanel: React.FC = () => {
     idEmpleado: '',
     idDeposito: '',
   });
+  // Cliente y vendedor elegidos (para mostrarlos en el selector y en el encabezado del PDF).
+  const [cliente, setCliente] = useState<ClienteResponseDTO | null>(null);
+  const [vendedor, setVendedor] = useState<EmpleadoResponseDTO | null>(null);
   const [top, setTop] = useState(10);
-  const [ordenProductos, setOrdenProductos] = useState<'total' | 'cantidad'>('total');
   const set = (cambios: Partial<Filtros>) => setFiltros((actual) => ({ ...actual, ...cambios }));
   const rangoValido = filtros.fechaDesde <= filtros.fechaHasta;
 
-  const opciones = useAsyncData(cargarOpciones);
+  const depositos = useAsyncData(catalogos.depositos);
   const cargar = useCallback(() => cargarReporte(filtros), [filtros]);
   const reporte = useAsyncData(cargar, rangoValido);
   const datos = reporte.data;
 
   const filtro = cn(fieldClass, 'bg-white');
 
-  const productos = datos
-    ? [...datos.porProducto].sort((a, b) => (ordenProductos === 'total' ? b.total - a.total : b.cantidad - a.cantidad)).slice(0, top)
-    : [];
-
   // Lo que se filtró, en palabras, para el encabezado del PDF.
-  const cliente = opciones.data?.clientes.find((c) => c.idCliente === filtros.idCliente);
-  const vendedor = opciones.data?.empleados.find((e) => e.id === filtros.idEmpleado);
-  const deposito = opciones.data?.depositos.find((d) => d.id === filtros.idDeposito);
+  const deposito = depositos.data?.find((d) => d.id === filtros.idDeposito);
   const descripcion = [
     `Período: ${formatDate(filtros.fechaDesde)} al ${formatDate(filtros.fechaHasta)}`,
     filtros.estado ? `Estado: ${filtros.estado === 'EMITIDA' ? 'Emitidas' : 'Anuladas'}` : null,
@@ -221,9 +179,9 @@ export const ReportesPanel: React.FC = () => {
   ].filter(Boolean);
 
   return (
-    <div className="flex-1 flex flex-col space-y-5">
+    <div className="flex-1 flex flex-col space-y-4">
       {/* ---- Filtros (no salen en el PDF) ---- */}
-      <div className="print:hidden bg-white rounded-2xl border border-slate-200 p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200 p-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 items-end">
         <FormField label="Desde">
           <input className={filtro} type="date" value={filtros.fechaDesde} max={filtros.fechaHasta} onChange={(e) => set({ fechaDesde: e.target.value })} />
         </FormField>
@@ -238,29 +196,28 @@ export const ReportesPanel: React.FC = () => {
           </select>
         </FormField>
         <FormField label="Cliente">
-          <select className={filtro} value={filtros.idCliente} onChange={(e) => set({ idCliente: idONada(e.target.value) })}>
-            <option value="">Todos</option>
-            {opciones.data?.clientes.map((c) => (
-              <option key={c.idCliente} value={c.idCliente}>
-                {c.persona.nombreCompleto}
-              </option>
-            ))}
-          </select>
+          <ClienteSelector
+            value={cliente}
+            onChange={(c) => {
+              setCliente(c);
+              set({ idCliente: c?.idCliente ?? '' });
+            }}
+          />
         </FormField>
         <FormField label="Vendedor">
-          <select className={filtro} value={filtros.idEmpleado} onChange={(e) => set({ idEmpleado: idONada(e.target.value) })}>
-            <option value="">Todos</option>
-            {opciones.data?.empleados.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.persona.nombreCompleto}
-              </option>
-            ))}
-          </select>
+          <EmpleadoPicker
+            placeholder="Todos"
+            value={vendedor}
+            onChange={(v) => {
+              setVendedor(v);
+              set({ idEmpleado: v?.id ?? '' });
+            }}
+          />
         </FormField>
         <FormField label="Depósito">
           <select className={filtro} value={filtros.idDeposito} onChange={(e) => set({ idDeposito: idONada(e.target.value) })}>
             <option value="">Todos</option>
-            {opciones.data?.depositos.map((d) => (
+            {depositos.data?.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nombre}
               </option>
@@ -292,9 +249,9 @@ export const ReportesPanel: React.FC = () => {
       )}
 
       {datos && (
-        <div className={cn('space-y-6', reporte.loading && 'opacity-50')}>
+        <div className={cn('space-y-4', reporte.loading && 'opacity-50')}>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <Indicador titulo="Total vendido" valor={formatMoney(datos.totalVendido)} nota={`IVA incluido: ${formatMoney(datos.totalIva)}`} />
+            <Indicador titulo="Total vendido" valor={formatMoney(datos.totalVendido)} nota="IVA incluido" />
             <Indicador titulo="Facturas emitidas" valor={String(datos.emitidas)} />
             <Indicador titulo="Ticket promedio" valor={formatMoney(datos.emitidas ? datos.totalVendido / datos.emitidas : 0)} />
             <Indicador titulo="Facturas anuladas" valor={String(datos.anuladas)} nota={`Por ${formatMoney(datos.totalAnulado)}`} />
@@ -305,31 +262,22 @@ export const ReportesPanel: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="break-inside-avoid">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Productos más vendidos</h4>
-                <div className="flex items-center gap-2 print:hidden">
-                  <select className={cn(filtro, 'w-auto py-1 text-xs')} value={ordenProductos} onChange={(e) => setOrdenProductos(e.target.value as 'total' | 'cantidad')}>
-                    <option value="total">Por monto</option>
-                    <option value="cantidad">Por unidades</option>
-                  </select>
-                  <select className={cn(filtro, 'w-auto py-1 text-xs')} value={top} onChange={(e) => setTop(Number(e.target.value))}>
-                    <option value={5}>Top 5</option>
-                    <option value={10}>Top 10</option>
-                    <option value={20}>Top 20</option>
-                  </select>
-                </div>
+              <div className="flex items-center justify-between mb-1.5">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Mejores clientes</h4>
+                <select className={cn(filtro, 'w-auto py-1 text-xs print:hidden')} value={top} onChange={(e) => setTop(Number(e.target.value))}>
+                  <option value={5}>Top 5</option>
+                  <option value={10}>Top 10</option>
+                  <option value={20}>Top 20</option>
+                </select>
               </div>
-              <DataTable columns={columnas('Producto', 'Unidades')} rows={productos} rowKey={(g) => g.nombre} emptyMessage="Sin ventas con estos filtros." />
+              <DataTable columns={columnas('Cliente')} rows={datos.porCliente.slice(0, top)} rowKey={(g) => g.nombre} emptyMessage="Sin ventas con estos filtros." />
             </div>
-
-            <Seccion titulo="Mejores clientes" filas={datos.porCliente.slice(0, top)} columns={columnas('Cliente', 'Facturas')} />
-            <Seccion titulo="Ventas por vendedor" filas={datos.porVendedor} columns={columnas('Vendedor', 'Facturas')} />
-            <Seccion titulo="Ventas por medio de pago" filas={datos.porMedioPago} columns={columnas('Medio de pago', 'Facturas')} />
+            <Seccion titulo="Ventas por vendedor" filas={datos.porVendedor} columns={columnas('Vendedor')} />
+            <Seccion titulo="Ventas por medio de pago" filas={datos.porMedioPago} columns={columnas('Medio de pago')} />
+            <Seccion titulo="Ventas por día" filas={datos.porDia} columns={columnas('Fecha', (g) => formatDate(g.nombre))} />
           </div>
-
-          <Seccion titulo="Ventas por día" filas={datos.porDia} columns={columnas('Fecha', 'Facturas', (g) => formatDate(g.nombre))} />
         </div>
       )}
     </div>

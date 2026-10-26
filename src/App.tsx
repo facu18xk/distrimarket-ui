@@ -31,7 +31,6 @@ const MainLayout: React.FC = () => {
         ) : route.kind === 'notFound' ? (
           <ErrorPage code={404} onHome={goHome} />
         ) : (
-          // Autorización: un módulo solo se dibuja si alguno de los roles del usuario lo incluye.
           canAccess(activeModule) && (
             <ErrorBoundary key={`${activeModule}-${retryKey}`} onHome={goHome}>
               {activeModule === 'stock' && <StockModuleView />}
@@ -42,7 +41,6 @@ const MainLayout: React.FC = () => {
           )
         )}
       </main>
-
       <Footer />
 
       <ContactModal />

@@ -1,11 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { PagedTable, StatusBadge, SubTabs, type Column, type SubTab } from '../common';
-import { useAsyncData, useLocalPagedResource } from '../../hooks';
-import { catalogos } from '../../services';
-import { indexar } from '../../lib/catalogCache';
+import { nombreProveedor } from '../../lib/proveedor';
+import { usePagedResource, usePorId } from '../../hooks';
+import { comprasApi, inventarioApi } from '../../services';
 import { formatMoney } from '../../lib/format';
 import type { OrdenCompraDTO } from '../../types/api';
-import { cargarOrdenes } from './catalogos';
 import { FacturasCompraPanel } from './FacturasCompraPanel';
 import { ProveedoresPanel } from './ProveedoresPanel';
 
@@ -17,23 +16,19 @@ const TABS: SubTab<Tab>[] = [
   { id: 'ordenes', label: 'Órdenes de compra' },
 ];
 
-const buscarOrden = (o: OrdenCompraDTO) => `${o.estado ?? ''} ${o.observacion ?? ''}`;
-
-/** La orden trae proveedor y empleado por id: sus nombres salen de los catálogos en caché. */
+/**
+ * La orden trae proveedor y empleado por id: se pide cada id distinto de la página una sola vez
+ * (el backend lo responde desde Redis), sin cargar todos los proveedores ni empleados.
+ */
 const OrdenesPanel: React.FC = () => {
-  const ordenes = useLocalPagedResource(cargarOrdenes, buscarOrden);
-  const proveedores = useAsyncData(catalogos.proveedores);
-  const empleados = useAsyncData(catalogos.empleados);
-  const proveedorPorId = useMemo(() => indexar(proveedores.data, (p) => p.idProveedor), [proveedores.data]);
-  const empleadoPorId = useMemo(() => indexar(empleados.data, (e) => e.id), [empleados.data]);
+  const ordenes = usePagedResource(comprasApi.ordenes.list);
+  const proveedorPorId = usePorId(comprasApi.proveedores.ref, ordenes.items.map((o) => o.idProveedor));
+  const empleadoPorId = usePorId(inventarioApi.empleados.ref, ordenes.items.map((o) => o.idEmpleado));
 
   const columnas: Column<OrdenCompraDTO>[] = [
     {
       header: 'Proveedor',
-      cell: (o) => {
-        const p = proveedorPorId.get(o.idProveedor);
-        return p ? p.nombreFantasia || p.persona.nombreCompleto : '—';
-      },
+      cell: (o) => nombreProveedor(proveedorPorId.get(o.idProveedor)),
       className: 'font-bold text-slate-900',
     },
     { header: 'Responsable', cell: (o) => empleadoPorId.get(o.idEmpleado)?.persona.nombreCompleto ?? '—', className: 'text-slate-600' },
@@ -48,7 +43,6 @@ const OrdenesPanel: React.FC = () => {
       columns={columnas}
       rowKey={(o) => o.id}
       label="órdenes de compra"
-      searchPlaceholder="Buscar por estado u observación..."
     />
   );
 };
@@ -58,7 +52,7 @@ export const CompraModuleView: React.FC = () => {
   const [tab, setTab] = useState<Tab>('facturas');
 
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-7xl w-full mx-auto">
+    <div className="flex-1 flex flex-col p-3 sm:p-4 max-w-7xl w-full mx-auto">
       <SubTabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === 'facturas' && <FacturasCompraPanel />}
       {tab === 'proveedores' && <ProveedoresPanel />}

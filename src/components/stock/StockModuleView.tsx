@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { PagedTable, StatusBadge, SubTabs, type Column, type SubTab } from '../common';
-import { useLocalPagedResource } from '../../hooks';
+import { usePagedResource } from '../../hooks';
+import { inventarioApi } from '../../services';
 import type { DepositoResponseDTO } from '../../types/api';
-import { cargarDepositos } from './catalogos';
 import { ExistenciasPanel } from './ExistenciasPanel';
 import { AjustesPanel, TransferenciasPanel } from './MovimientosPanel';
 import { ProductosPanel } from './ProductosPanel';
@@ -23,17 +23,14 @@ const columnasDepositos: Column<DepositoResponseDTO>[] = [
   { header: 'Estado', cell: (d) => <StatusBadge status={d.estado ? 'Activo' : 'Inactivo'} /> },
 ];
 
-const buscarDeposito = (d: DepositoResponseDTO) => `${d.nombre} ${d.ubicacion ?? ''}`;
-
 const DepositosPanel: React.FC = () => {
-  const depositos = useLocalPagedResource(cargarDepositos, buscarDeposito);
+  const depositos = usePagedResource(inventarioApi.depositos.list);
   return (
     <PagedTable
       resource={depositos}
       columns={columnasDepositos}
       rowKey={(d) => d.id}
       label="depósitos"
-      searchPlaceholder="Buscar depósito..."
     />
   );
 };
@@ -43,7 +40,7 @@ export const StockModuleView: React.FC = () => {
   const [tab, setTab] = useState<Tab>('productos');
 
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-7xl w-full mx-auto">
+    <div className="flex-1 flex flex-col p-3 sm:p-4 max-w-7xl w-full mx-auto">
       <SubTabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === 'productos' && <ProductosPanel />}
       {tab === 'existencias' && <ExistenciasPanel />}

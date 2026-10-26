@@ -25,7 +25,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             e.stopPropagation();
             onView();
           }}
-          className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          className="h-6 w-6 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           title="Ver detalles"
         >
           <Eye className="w-3.5 h-3.5" />
@@ -40,7 +40,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             e.stopPropagation();
             onEdit();
           }}
-          className="h-7 w-7 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+          className="h-6 w-6 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
           title="Editar registro"
         >
           <Edit3 className="w-3.5 h-3.5" />
@@ -55,7 +55,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             e.stopPropagation();
             onDelete();
           }}
-          className="h-7 w-7 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+          className="h-6 w-6 text-slate-500 hover:text-rose-600 hover:bg-rose-50"
           title="Eliminar o anular"
         >
           <Trash2 className="w-3.5 h-3.5" />

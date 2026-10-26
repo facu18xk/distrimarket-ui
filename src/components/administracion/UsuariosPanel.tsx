@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useAsyncAction, useAsyncData, usePagedResource, useRemove } from '../../hooks';
+import { useAsyncAction, usePagedResource, useRemove } from '../../hooks';
 import { MODULE_LABELS, ROLES, ROLE_LIST, modulesFor } from '../../auth/roles';
-import { authApi, catalogos, errorMessage, inventarioApi } from '../../services';
+import { authApi, errorMessage, inventarioApi } from '../../services';
 import { normalizeCi } from '../../lib/paraguay';
-import type { PersonaResponseDTO, RolUsuario, UsuarioResponseDTO } from '../../types/api';
-import { ActionButtons, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, fieldClass, type Column } from '../common';
+import type { EmpleadoResponseDTO, PersonaResponseDTO, RolUsuario, UsuarioResponseDTO } from '../../types/api';
+import { ActionButtons, EmpleadoPicker, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, fieldClass, type Column } from '../common';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 
@@ -102,8 +102,6 @@ export const UsuariosPanel: React.FC = () => {
 
 type Vinculo = 'empleado' | 'persona';
 
-const cargarEmpleados = async () => (await catalogos.empleados()).filter((e) => e.estado);
-
 interface UsuarioFormProps {
   usuario: UsuarioResponseDTO | null;
   onClose: () => void;
@@ -113,12 +111,11 @@ interface UsuarioFormProps {
 /** Se monta al abrir el modal: cada apertura empieza con el formulario limpio. */
 const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) => {
   const guardar = useAsyncAction();
-  const empleados = useAsyncData(cargarEmpleados);
   const [username, setUsername] = useState(usuario?.username ?? '');
   const [password, setPassword] = useState('');
   const [roles, setRoles] = useState<RolUsuario[]>(usuario?.roles ?? ['VENDEDOR']);
   const [vinculo, setVinculo] = useState<Vinculo>('empleado');
-  const [idEmpleado, setIdEmpleado] = useState<number | ''>('');
+  const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
   const [ci, setCi] = useState('');
   const [persona, setPersona] = useState<PersonaResponseDTO | null>(null);
   const [errorPersona, setErrorPersona] = useState<string | null>(null);
@@ -140,7 +137,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
     }
   };
 
-  const faltaVinculo = !usuario && (vinculo === 'empleado' ? idEmpleado === '' : !persona);
+  const faltaVinculo = !usuario && (vinculo === 'empleado' ? !empleado : !persona);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +149,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
             username: username.trim(),
             password,
             roles,
-            ...(vinculo === 'empleado' ? { idEmpleado: Number(idEmpleado) } : { idPersona: persona!.id }),
+            ...(vinculo === 'empleado' ? { idEmpleado: empleado!.id } : { idPersona: persona!.id }),
           })
     );
     if (ok) {
@@ -238,22 +235,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
           </div>
 
           {vinculo === 'empleado' ? (
-            empleados.error ? (
-              <FeedbackBanner>{empleados.error}</FeedbackBanner>
-            ) : (
-              <select
-                className={fieldClass}
-                value={idEmpleado}
-                onChange={(e) => setIdEmpleado(e.target.value === '' ? '' : Number(e.target.value))}
-              >
-                <option value="">{empleados.loading ? 'Cargando empleados...' : 'Seleccione un empleado'}</option>
-                {(empleados.data ?? []).map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.persona.nombreCompleto} · {emp.cargo} {emp.persona.ci ? `(CI ${emp.persona.ci})` : ''}
-                  </option>
-                ))}
-              </select>
-            )
+            <EmpleadoPicker value={empleado} onChange={setEmpleado} placeholder="Seleccione un empleado" />
           ) : (
             <div className="space-y-2">
               <div className="flex gap-2">

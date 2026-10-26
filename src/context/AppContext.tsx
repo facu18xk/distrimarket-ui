@@ -2,9 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import type { MainModule, VentaSubTab, AdminSubTab, UserProfile, ThemeConfig, ContactMessage } from '../types/distrimarket';
 import type { RolUsuario, UsuarioResponseDTO } from '../types/api';
 import { THEME_PALETTES } from '../lib/theme';
+import { esHexValido, temaDesdeHex, textoSobre } from '../lib/color';
 import { canAccess as rolesCanAccess, homeModule, rolesLabel } from '../auth/roles';
 import { serverErrors, session, type Session } from '../auth/session';
 import { limpiarCatalogos } from '../lib/catalogCache';
+import { olvidarPaginas } from '../services/paginasEnMemoria';
 import { LOGIN_PATH, MODULE_PATHS, resolveRoute, type Route } from '../routing/routes';
 import { authApi, errorMessage } from '../services';
 
@@ -33,6 +35,8 @@ interface AppContextType {
   // Tema (por usuario, sin volver a desplegar)
   theme: ThemeConfig;
   setThemeColor: (colorId: string) => void;
+  /** Color libre elegido en la rueda (hex, por ejemplo "#1E90FF"). */
+  setThemeHex: (hex: string) => void;
   toggleDarkMode: () => void;
 
   // Navegación (la URL decide el módulo; ver routing/routes)
@@ -157,6 +161,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       session.clear();
       // Los catálogos guardados son de esta sesión: el próximo usuario los vuelve a pedir.
       limpiarCatalogos();
+      olvidarPaginas();
       setCurrent(null);
       setProfile(null);
       setServerError(null);
@@ -198,6 +203,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('distrimarket_user_theme', JSON.stringify(theme));
     document.documentElement.style.setProperty('--user-primary-color', theme.primaryHex);
     document.documentElement.style.setProperty('--user-hover-color', theme.hoverHex);
+    // Texto sobre el color principal: negro si el color es muy claro (ver .sobre-primario en index.css).
+    document.documentElement.style.setProperty('--user-on-primary-color', textoSobre(theme.primaryHex));
   }, [theme]);
 
   const setThemeColor = (colorId: string) => {
@@ -205,6 +212,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (found) {
       setTheme((prev) => ({ ...found, isDark: prev.isDark }));
     }
+  };
+
+  const setThemeHex = (hex: string) => {
+    if (esHexValido(hex)) setTheme((prev) => temaDesdeHex(hex, prev.isDark));
   };
 
   const toggleDarkMode = () => {
@@ -224,6 +235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const token = await authApi.login({ username: username.trim(), password });
       limpiarCatalogos();
+      olvidarPaginas();
       const nueva = session.start(token);
       setCurrent(nueva);
       setLoginNotice(null);
@@ -272,6 +284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAdmin,
         theme,
         setThemeColor,
+        setThemeHex,
         toggleDarkMode,
         route,
         activeModule,

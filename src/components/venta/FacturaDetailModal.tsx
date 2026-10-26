@@ -3,9 +3,8 @@ import React, { useCallback, useMemo } from 'react';
 import { Ban, Edit3, RotateCcw, Trash2 } from 'lucide-react';
 import { FeedbackBanner, ModalDialog, StatusBadge } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useConfirm } from '../../hooks';
-import { catalogos, ventasApi } from '../../services';
-import { indexar } from '../../lib/catalogCache';
+import { useAsyncAction, useAsyncData, useConfirm, usePorId } from '../../hooks';
+import { catalogos, inventarioApi, ventasApi } from '../../services';
 import { formatDate, formatMoney } from '../../lib/format';
 import type { FacturaVentaResponseDTO } from '../../types/api';
 import { useApp } from '../../context/AppContext';
@@ -34,7 +33,7 @@ const FacturaDetalle: React.FC<Omit<FacturaDetailModalProps, 'idFactura'> & { id
 
   if (!factura.data) {
     return (
-      <ModalDialog isOpen onClose={onClose} title="Factura" maxWidth="2xl">
+      <ModalDialog isOpen onClose={onClose} title="Factura" maxWidth="3xl">
         {factura.error ? (
           <FeedbackBanner>{factura.error}</FeedbackBanner>
         ) : (
@@ -61,12 +60,12 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
   const { isAdmin } = useApp();
   const accion = useAsyncAction();
   const confirm = useConfirm();
-  // Nombres de inventario desde los catálogos en caché: la factura trae solo los ids.
-  const productos = useAsyncData(catalogos.productos);
-  const empleados = useAsyncData(catalogos.empleados);
+  // La factura trae solo ids de inventario: cada producto distinto y el vendedor se piden por id
+  // (inventario los responde desde Redis). El depósito sale del catálogo chico de la sesión.
+  const productoPorId = usePorId(inventarioApi.productos.ref, factura.detalles.map((d) => d.idProducto));
+  const empleadoPorId = usePorId(inventarioApi.empleados.ref, [factura.idEmpleado]);
+  const empleado = factura.idEmpleado ? empleadoPorId.get(factura.idEmpleado) : undefined;
   const depositos = useAsyncData(catalogos.depositos);
-  const productoPorId = useMemo(() => indexar(productos.data, (p) => p.id), [productos.data]);
-  const empleado = useMemo(() => empleados.data?.find((e) => e.id === factura.idEmpleado), [empleados.data, factura.idEmpleado]);
   const deposito = useMemo(() => depositos.data?.find((d) => d.id === factura.idDeposito), [depositos.data, factura.idDeposito]);
 
   const emitida = factura.estado === 'EMITIDA';
@@ -90,7 +89,7 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
       onClose={cerrar}
       title={`Factura ${formatNumeroFactura(factura.numeroFactura)}`}
       subtitle={`Timbrado ${factura.numeroTimbrado ?? '—'} · ${factura.medioPagoNombre ?? '—'}`}
-      maxWidth="2xl"
+      maxWidth="3xl"
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
@@ -119,7 +118,7 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
               {factura.detalles.map((d) => (
                 <tr key={d.idDetalle}>
                   <td className="py-2.5 px-3 font-semibold text-slate-800">
-                    {productoPorId.get(d.idProducto)?.nombre ?? 'Producto dado de baja'}
+                    {productoPorId.has(d.idProducto) ? (productoPorId.get(d.idProducto)?.nombre ?? 'Producto dado de baja') : 'Cargando...'}
                   </td>
                   <td className="py-2.5 px-3 text-center">{d.cantidad}</td>
                   <td className="py-2.5 px-3 text-right">{formatMoney(d.precioUnitario)}</td>

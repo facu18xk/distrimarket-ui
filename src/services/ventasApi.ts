@@ -1,7 +1,6 @@
 import { http } from './http';
 import { getPage, type PageQuery, type PageResult } from './pagination';
 import { crudResource } from './resource';
-import { invalidar } from '../lib/catalogCache';
 import type {
   ClientePatchRequestDTO,
   ClienteRequestDTO,
@@ -29,12 +28,6 @@ export type FacturaVentaFilters = {
 
 const FACTURAS = '/ventas/facturas-venta';
 
-/** La factura completa se guarda en la sesión para los reportes; al cambiar se descarta. */
-async function yOlvidarFactura<T>(id: number, operacion: Promise<T>): Promise<T> {
-  const resultado = await operacion;
-  invalidar(`factura-${id}`);
-  return resultado;
-}
 const clientes = crudResource<ClienteResponseDTO, ClienteRequestDTO>('/ventas/clientes');
 
 /** Microservicio de ventas (distrimarket-ms-featureC), a través del gateway. */
@@ -56,10 +49,10 @@ export const ventasApi = {
     get: (id: number) => http.get<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`),
     create: (body: FacturaVentaRequestDTO) => http.post<FacturaVentaResponseDTO>(FACTURAS, body),
     update: (id: number, body: FacturaVentaRequestDTO) =>
-      yOlvidarFactura(id, http.put<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`, body)),
-    remove: (id: number) => yOlvidarFactura(id, http.delete(`${FACTURAS}/${id}`)),
+      http.put<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`, body),
+    remove: (id: number) => http.delete(`${FACTURAS}/${id}`),
     /** Anular devuelve el stock; reemitir lo vuelve a descontar. */
     cambiarEstado: (id: number, estado: EstadoFacturaVenta) =>
-      yOlvidarFactura(id, http.patch<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`, { estado })),
+      http.patch<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`, { estado }),
   },
 };

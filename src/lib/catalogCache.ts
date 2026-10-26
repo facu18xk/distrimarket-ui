@@ -1,14 +1,11 @@
 /**
- * Caché de catálogos en sessionStorage.
- *
- * Los listados del backend traen solo ids de lo que pertenece a otro recurso (por ejemplo,
- * una factura trae idEmpleado, no el empleado entero). Para mostrar nombres, la UI carga el
- * catálogo una sola vez y lo reutiliza en todas las filas y pantallas: 10 facturas del mismo
- * vendedor no generan 10 pedidos, sino ninguno más.
+ * Caché de catálogos chicos en sessionStorage (medios de pago, timbrados, categorías,
+ * marcas, depósitos; ver services/catalogos). Se cargan una vez y se reutilizan en todas
+ * las filas y pantallas. Lo demás no se guarda aquí: se pide al backend, que lo sirve desde Redis.
  *
  * - Lo guardado vence a los pocos minutos y se borra al cerrar sesión (sessionStorage).
  * - Dos pantallas que piden el mismo catálogo a la vez comparten el mismo pedido en curso.
- * - Al modificar un catálogo (por ejemplo, alta de producto) se invalida con {@link invalidar}.
+ * - Al modificar un catálogo (por ejemplo, alta de un medio de pago) se invalida con {@link invalidar}.
  */
 const PREFIJO = 'distrimarket_cat_';
 const VIGENCIA_MS = 10 * 60 * 1000;

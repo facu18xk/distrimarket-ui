@@ -44,14 +44,14 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
   };
 
   return (
-    <div className="mt-auto pt-4 pb-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-slate-600 select-none">
+    <div className="mt-auto pt-2 pb-1 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-slate-600 select-none">
       <div className="flex items-center space-x-3">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="flex items-center space-x-1.5 h-8 text-xs font-semibold"
+          className="flex items-center space-x-1.5 h-7 text-xs font-semibold"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           <span>Anterior</span>
@@ -76,8 +76,8 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
               variant={currentPage === p ? 'default' : 'ghost'}
               size="sm"
               onClick={() => onPageChange(p)}
-              style={currentPage === p ? { backgroundColor: theme.primaryHex, color: '#FFF' } : {}}
-              className="w-8 h-8 p-0 text-xs font-bold"
+              style={currentPage === p ? { backgroundColor: theme.primaryHex, color: 'var(--user-on-primary-color, #FFF)' } : {}}
+              className="w-7 h-7 p-0 text-xs font-bold"
             >
               {p}
             </Button>
@@ -91,7 +91,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="flex items-center space-x-1.5 h-8 text-xs font-semibold"
+          className="flex items-center space-x-1.5 h-7 text-xs font-semibold"
         >
           <span>Siguiente</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -108,7 +108,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
               // La clave hace que el campo muestre la página actual cada vez que cambia.
               key={currentPage}
               defaultValue={currentPage}
-              className="w-12 h-8 text-center p-1 text-xs font-bold"
+              className="w-12 h-7 text-center p-1 text-xs font-bold"
             />
           </form>
         )}

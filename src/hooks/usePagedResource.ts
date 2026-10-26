@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useDebounce } from './useDebounce';
 import { errorMessage } from '../services/http';
 import { DEFAULT_PAGE_SIZE, type PageQuery, type PageResult } from '../services/pagination';
+import { olvidarPaginas, pedirPagina } from '../services/paginasEnMemoria';
 
 export interface PagedResource<T> {
   items: T[];
@@ -24,6 +25,18 @@ interface Options<F> {
   filters?: F;
   /** false = no consulta todavía (por ejemplo, una pestaña que no está visible). */
   enabled?: boolean;
+}
+
+/** Cada listado (cada `fetcher`) recibe un número para separar sus páginas en la memoria. */
+const idsDeListado = new WeakMap<object, number>();
+let ultimoIdDeListado = 0;
+function idDeListado(fetcher: object): number {
+  let id = idsDeListado.get(fetcher);
+  if (id === undefined) {
+    id = ++ultimoIdDeListado;
+    idsDeListado.set(fetcher, id);
+  }
+  return id;
 }
 
 /** Respuesta (o error) de una consulta, junto con la consulta a la que pertenece. */
@@ -61,7 +74,10 @@ export function usePagedResource<T, F = undefined>(
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    fetcher({ page, size: pageSize, search: debouncedSearch, sort }, filtersKey === 'null' ? undefined : (JSON.parse(filtersKey) as F))
+    const clavePagina = `${idDeListado(fetcher)}|${debouncedSearch}|${filtersKey}|${page}|${pageSize}|${sort ?? ''}`;
+    pedirPagina<T>(clavePagina, () =>
+      fetcher({ page, size: pageSize, search: debouncedSearch, sort }, filtersKey === 'null' ? undefined : (JSON.parse(filtersKey) as F))
+    )
       .then((result) => {
         if (!cancelled) setSettled({ key: requestKey, result, error: null });
       })
@@ -75,7 +91,10 @@ export function usePagedResource<T, F = undefined>(
   }, [fetcher, page, pageSize, debouncedSearch, sort, filtersKey, enabled, requestKey]);
 
   const setPage = useCallback((next: number) => setPageChoice({ scope, page: next }), [scope]);
-  const reload = useCallback(() => setVersion((v) => v + 1), []);
+  const reload = useCallback(() => {
+    olvidarPaginas();
+    setVersion((v) => v + 1);
+  }, []);
 
   // Cargando = la consulta vigente todavía no tiene respuesta.
   const current = settled.key === requestKey;

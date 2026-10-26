@@ -7,3 +7,27 @@
     display: none;
   }
 }
+
+/*
+ * Tamaño base algo menor que el del navegador (16px): todo lo que Tailwind mide en rem
+ * (texto, márgenes, alturas) se achica en la misma proporción, para que una tabla de
+ * 10 filas entre completa en una laptop de 13" sin scroll hasta el pie.
+ */
+html {
+  font-size: 15px;
+}
+
+/*
+ * Zonas pintadas con el color principal (encabezado, botones principales, página activa).
+ * Dentro de ellas, el "blanco" de Tailwind (text-white, bg-white/20, border-white/40...) pasa a
+ * ser el color de texto que mejor contrasta con el color elegido: negro si es muy claro.
+ */
+.sobre-primario {
+  --color-white: var(--user-on-primary-color, #ffffff);
+  color: var(--user-on-primary-color, #ffffff);
+}
+
+/* Paneles blancos dentro de una zona .sobre-primario (por ejemplo, el menú del usuario en el encabezado). */
+.fuera-de-primario {
+  --color-white: #ffffff;
+}

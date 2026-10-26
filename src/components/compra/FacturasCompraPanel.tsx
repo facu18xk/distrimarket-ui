@@ -8,29 +8,27 @@ import {
   LineItemsEditor,
   ModalDialog,
   PagedTable,
+  ProveedorPicker,
   StatusBadge,
   fieldClass,
   type Column,
 } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useConfirm, useLocalPagedResource, useRemove } from '../../hooks';
+import { useAsyncAction, useAsyncData, useConfirm, usePagedResource, useRemove } from '../../hooks';
 import { comprasApi } from '../../services';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
 import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, normalizeTimbrado, padNumeroFactura } from '../../lib/paraguay';
 import { preferredId, rememberId } from '../../lib/preferences';
 import type { CondicionCompra, FacturaCompraResponseDTO, ProveedorResponseDTO } from '../../types/api';
-import { cargarCatalogosCompra, cargarFacturasCompra } from './catalogos';
+import { cargarCatalogosCompra } from './catalogos';
+import { nombreProveedor } from '../../lib/proveedor';
 import { ProveedorFormModal } from './ProveedoresPanel';
 
-const nombreProveedor = (p?: ProveedorResponseDTO) => p?.nombreFantasia || p?.persona.nombreCompleto || '—';
 const anulada = (f: FacturaCompraResponseDTO) => f.estado?.toUpperCase().startsWith('ANULAD');
 
-const textoDeBusqueda = (f: FacturaCompraResponseDTO) =>
-  `${f.numeroFactura ?? ''} ${formatNumeroFactura(f.numeroFactura)} ${nombreProveedor(f.proveedor)} ${f.timbrado} ${f.estado} ${f.condicionCompra}`;
-
 export const FacturasCompraPanel: React.FC = () => {
-  const facturas = useLocalPagedResource(cargarFacturasCompra, textoDeBusqueda);
+  const facturas = usePagedResource(comprasApi.facturas.list);
   const baja = useRemove(facturas.reload);
   const anular = useAsyncAction();
   const confirm = useConfirm();
@@ -63,7 +61,7 @@ export const FacturasCompraPanel: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={() => anularFactura(f)}
-              className="h-7 w-7 text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+              className="h-6 w-6 text-slate-500 hover:text-amber-600 hover:bg-amber-50"
               title="Anular"
             >
               <Ban />
@@ -86,14 +84,13 @@ export const FacturasCompraPanel: React.FC = () => {
 
   return (
     <>
-      {error && <FeedbackBanner className="mb-4">{error}</FeedbackBanner>}
+      {error && <FeedbackBanner className="mb-3">{error}</FeedbackBanner>}
 
       <PagedTable
         resource={facturas}
         columns={columns}
         rowKey={(f) => f.idFacturaCompra}
         label="facturas de compra"
-        searchPlaceholder="Buscar por número, proveedor o timbrado..."
         filters={
           <Button variant="emerald" onClick={() => setFormOpen(true)}>
             <Plus />
@@ -107,7 +104,7 @@ export const FacturasCompraPanel: React.FC = () => {
         onClose={() => setFormOpen(false)}
         title="Registrar factura de compra"
         subtitle="Se cargan los datos tal como figuran en la factura del proveedor."
-        maxWidth="2xl"
+        maxWidth="4xl"
       >
         <FacturaCompraForm onClose={() => setFormOpen(false)} onSaved={facturas.reload} />
       </ModalDialog>
@@ -125,19 +122,16 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   const [numeroFactura, setNumeroFactura] = useState('');
   const [timbrado, setTimbrado] = useState('');
   const [fechaEmision, setFechaEmision] = useState(todayIso());
-  const [idProveedor, setIdProveedor] = useState<number | ''>('');
+  const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
   const [idDeposito, setIdDeposito] = useState<number | ''>('');
   const [idMedioPago, setIdMedioPago] = useState<number | ''>('');
   const [condicion, setCondicion] = useState<CondicionCompra>('CONTADO');
   const [lineas, setLineas] = useState<LineItem[]>([newLineItem()]);
   const [altaProveedor, setAltaProveedor] = useState(false);
-  // Proveedores registrados desde este formulario, que todavía no están en el catálogo cargado.
-  const [nuevos, setNuevos] = useState<ProveedorResponseDTO[]>([]);
 
   if (catalogos.error) return <FeedbackBanner>{catalogos.error}</FeedbackBanner>;
   if (!catalogos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
-  const { depositos, mediosPago, productos } = catalogos.data;
-  const proveedores = [...nuevos, ...catalogos.data.proveedores];
+  const { depositos, mediosPago } = catalogos.data;
 
   const deposito = idDeposito !== '' ? idDeposito : preferredId('deposito', depositos.map((d) => d.id));
   const numeroCompleto = padNumeroFactura(numeroFactura);
@@ -146,17 +140,17 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorNumero || errorTimbrado) return;
+    if (errorNumero || errorTimbrado || !proveedor) return;
     const ok = await guardar.run(() =>
       comprasApi.facturas.create({
         numeroFactura: numeroCompleto,
         fechaEmision,
         timbrado,
-        idProveedor: Number(idProveedor),
+        idProveedor: proveedor.idProveedor,
         idDeposito: Number(deposito),
         idMedioPago: Number(idMedioPago),
         condicionCompra: condicion,
-        detalles: lineas.map((l) => ({ idProducto: Number(l.idProducto), cantidad: l.cantidad, precioUnitario: l.precioUnitario })),
+        detalles: lineas.filter((l) => l.producto).map((l) => ({ idProducto: l.producto!.id, cantidad: l.cantidad, precioUnitario: l.precioUnitario })),
       })
     );
     if (ok) {
@@ -171,19 +165,13 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <FormField label="Proveedor" required className="sm:col-span-2">
             <div className="flex gap-2">
-              <select className={fieldClass} required value={idProveedor} onChange={(e) => setIdProveedor(idONada(e.target.value))}>
-                <option value="">Seleccionar...</option>
-                {proveedores.map((p) => (
-                  <option key={p.idProveedor} value={p.idProveedor}>
-                    {nombreProveedor(p)}
-                    {p.persona.ruc ? ` (${p.persona.ruc})` : ''}
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1 min-w-0">
+                <ProveedorPicker required value={proveedor} onChange={setProveedor} />
+              </div>
               <Button type="button" variant="outline" className="shrink-0" onClick={() => setAltaProveedor(true)} title="Registrar proveedor nuevo">
                 <UserPlus />
                 <span>Nuevo</span>
@@ -234,7 +222,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
               ))}
             </select>
           </FormField>
-          <FormField label="Depósito de ingreso" required hint="Aquí se suma el stock." className="sm:col-span-2">
+          <FormField label="Depósito de ingreso" required hint="Aquí se suma el stock.">
             <select className={fieldClass} required value={deposito} onChange={(e) => setIdDeposito(Number(e.target.value))}>
               {depositos.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -245,7 +233,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
           </FormField>
         </div>
 
-        <LineItemsEditor lines={lineas} onChange={setLineas} productos={productos} price="manual" />
+        <LineItemsEditor lines={lineas} onChange={setLineas} price="manual" />
 
         {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}
 
@@ -256,10 +244,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
       <ProveedorFormModal
         isOpen={altaProveedor}
         onClose={() => setAltaProveedor(false)}
-        onSaved={(proveedor) => {
-          setNuevos((actuales) => [proveedor, ...actuales]);
-          setIdProveedor(proveedor.idProveedor);
-        }}
+        onSaved={(nuevo) => setProveedor(nuevo)}
       />
     </>
   );

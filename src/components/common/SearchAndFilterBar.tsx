@@ -20,10 +20,10 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
   children,
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 mb-3">
       {showSearch ? (
         <div className="relative flex-1 max-w-lg">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 z-10">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 z-10">
             <Search className="w-4 h-4" />
           </div>
           <Input
@@ -31,7 +31,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={placeholder}
-            className="pl-10 pr-10 py-2.5 h-10 bg-white"
+            className="pl-9 pr-9 h-9 bg-white"
           />
           {searchValue && (
             <button

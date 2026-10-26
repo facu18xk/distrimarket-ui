@@ -4,7 +4,8 @@ import type { ProductoResponseDTO } from '../types/api';
 export interface LineItem {
   /** Identificador local de la fila; el backend no lo recibe. */
   key: number;
-  idProducto: number | '';
+  /** Producto elegido (con nombre y precio para mostrarlo); null = todavía sin elegir. */
+  producto: ProductoResponseDTO | null;
   cantidad: number;
   /** Solo cuando el precio se carga a mano (compras). */
   precioUnitario: number;
@@ -22,18 +23,41 @@ let nextKey = 1;
 
 export const newLineItem = (values: Partial<Omit<LineItem, 'key'>> = {}): LineItem => ({
   key: nextKey++,
-  idProducto: '',
+  producto: null,
   cantidad: 1,
   precioUnitario: 0,
   ...values,
 });
 
-export function lineUnitPrice(line: LineItem, productos: ProductoResponseDTO[], price: PriceMode): number {
+export function lineUnitPrice(line: LineItem, price: PriceMode): number {
   if (price === 'manual') return line.precioUnitario;
   if (price === 'sin') return 0;
-  return productos.find((p) => p.id === line.idProducto)?.precioVenta ?? 0;
+  return line.producto?.precioVenta ?? 0;
 }
 
-export function linesTotal(lines: LineItem[], productos: ProductoResponseDTO[], price: PriceMode): number {
-  return lines.reduce((total, line) => total + lineUnitPrice(line, productos, price) * line.cantidad, 0);
+export function linesTotal(lines: LineItem[], price: PriceMode): number {
+  return lines.reduce((total, line) => total + lineUnitPrice(line, price) * line.cantidad, 0);
+}
+
+/** Lo que recibe el backend: id del producto y cantidad. */
+export const lineasADetalle = (lines: LineItem[]) =>
+  lines.filter((l) => l.producto).map((l) => ({ idProducto: l.producto!.id, cantidad: l.cantidad }));
+
+/**
+ * Líneas de un documento ya guardado (que trae solo idProducto): pide cada producto distinto por
+ * id una sola vez. Si alguno ya no existe, la línea queda con un producto "no disponible".
+ */
+export async function lineasDesdeDetalle(detalles: { idProducto: number; cantidad: number; precioUnitario?: number }[], buscarProducto: (id: number) => Promise<ProductoResponseDTO>): Promise<LineItem[]> {
+  const ids = [...new Set(detalles.map((d) => d.idProducto))];
+  const productos = new Map(
+    await Promise.all(
+      ids.map((id) =>
+        buscarProducto(id).then(
+          (p) => [id, p] as const,
+          () => [id, { id, nombre: `Producto #${id} (no disponible)`, precioVenta: 0, porcentajeIva: 0, idCategoria: 0, idMarca: 0, estado: false } as ProductoResponseDTO] as const
+        )
+      )
+    )
+  );
+  return detalles.map((d) => newLineItem({ producto: productos.get(d.idProducto) ?? null, cantidad: d.cantidad, precioUnitario: d.precioUnitario ?? 0 }));
 }

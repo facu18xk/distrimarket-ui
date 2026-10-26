@@ -1,26 +1,10 @@
-import { catalogos, comprasApi } from '../../services';
-
-// Cargas completas para los listados con búsqueda local (ver useLocalPagedResource).
-// Proveedores es un catálogo: sale de la caché y se refresca al crear, modificar o dar de baja.
-export const cargarProveedores = catalogos.proveedores;
-export const cargarFacturasCompra = () => comprasApi.facturas.all();
-export const cargarOrdenes = () => comprasApi.ordenes.all();
+import { catalogos, depositosActivos } from '../../services';
 
 /**
- * Lo que necesita la factura de compra para llenar sus selectores, desde los catálogos en caché.
- * Los medios de pago son los mismos que usa ventas (se administran en Administración).
+ * Catálogos chicos que necesita la factura de compra (de la sesión). Proveedores y productos
+ * se eligen con selectores paginados. Los medios de pago son los mismos que usa ventas.
  */
 export async function cargarCatalogosCompra() {
-  const [proveedores, productos, depositos, mediosPago] = await Promise.all([
-    catalogos.proveedores(),
-    catalogos.productos(),
-    catalogos.depositos(),
-    catalogos.mediosPago(),
-  ]);
-  return {
-    proveedores: proveedores.filter((p) => p.estado),
-    productos,
-    depositos: depositos.filter((d) => d.estado),
-    mediosPago,
-  };
+  const [depositos, mediosPago] = await Promise.all([depositosActivos(), catalogos.mediosPago()]);
+  return { depositos, mediosPago };
 }

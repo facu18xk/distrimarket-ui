@@ -7,6 +7,7 @@
  * de Vite; ver vite.config.ts). Así el navegador no necesita CORS.
  */
 import { serverErrors, session } from '../auth/session';
+import { olvidarPaginas } from './paginasEnMemoria';
 
 const GATEWAY_URL: string = (import.meta.env.VITE_API_GATEWAY_URL ?? '').replace(/\/$/, '');
 
@@ -77,7 +78,17 @@ const MENSAJES_POR_ESTADO: Record<number, string> = {
 /** Rutas públicas: un 401 aquí es "credenciales incorrectas", no una sesión vencida. */
 const RUTAS_SIN_SESION = ['/auth/login'];
 
-async function request<T>(method: string, path: string, options: { query?: QueryParams; body?: unknown } = {}): Promise<T> {
+interface RequestOptions {
+  query?: QueryParams;
+  body?: unknown;
+  /**
+   * Dato complementario (el nombre de un empleado en una tabla): si falla, la pantalla sigue
+   * igual, sin cerrar la sesión por un 403 ni mostrar la página de error.
+   */
+  complementario?: boolean;
+}
+
+async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
   const token = session.token();
   let response: Response;
   try {
@@ -93,7 +104,7 @@ async function request<T>(method: string, path: string, options: { query?: Query
     });
   } catch {
     const mensaje = 'No se pudo conectar con el API Gateway. Verifique que esté levantado.';
-    if (method === 'GET') serverErrors.notify(mensaje);
+    if (method === 'GET' && !options.complementario) serverErrors.notify(mensaje);
     throw new ApiError(0, mensaje, null);
   }
 
@@ -105,22 +116,26 @@ async function request<T>(method: string, path: string, options: { query?: Query
       // El gateway o el proxy no siempre responden JSON (502, 504).
     }
     const message = body?.message ?? MENSAJES_POR_ESTADO[response.status] ?? `Error ${response.status}`;
-    if (token && !RUTAS_SIN_SESION.includes(path)) {
+    if (token && !RUTAS_SIN_SESION.includes(path) && !options.complementario) {
       // Sin autenticación o sin autorización: se cierra la sesión y se vuelve al login.
       if (response.status === 401) session.expired('Su sesión expiró o ya no es válida. Inicie sesión nuevamente.');
       if (response.status === 403) session.expired('Su usuario no tiene permisos para esa operación. Inicie sesión nuevamente.');
     }
     // Una carga que falla en el servidor muestra la página de error 500; un guardado muestra el mensaje en su formulario.
-    if (method === 'GET' && response.status >= 500) serverErrors.notify(message);
+    if (method === 'GET' && response.status >= 500 && !options.complementario) serverErrors.notify(message);
     throw new ApiError(response.status, message, body);
   }
 
+  // Un cambio confirmado deja viejas las páginas recordadas de los listados.
+  if (method !== 'GET') olvidarPaginas();
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
 export const http = {
   get: <T>(path: string, query?: QueryParams) => request<T>('GET', path, { query }),
+  /** GET de un dato complementario: ver {@link RequestOptions.complementario}. */
+  getComplementario: <T>(path: string) => request<T>('GET', path, { complementario: true }),
   post: <T>(path: string, body: unknown) => request<T>('POST', path, { body }),
   put: <T>(path: string, body: unknown) => request<T>('PUT', path, { body }),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, { body }),

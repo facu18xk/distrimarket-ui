@@ -56,6 +56,9 @@ export function normalizePage<T>(raw: RawPage<T>): PageResult<T> {
 
 export const DEFAULT_PAGE_SIZE = 10;
 
+/** Tope de un catálogo chico pedido de una vez (el máximo de página que aceptan los microservicios). */
+export const CATALOGO_MAX = 100;
+
 /** GET paginado: traduce la página base 1 de la UI a la base 0 del backend. */
 export async function getPage<T>(path: string, query: PageQuery = {}, filters: QueryParams = {}): Promise<PageResult<T>> {
   const raw = await http.get<RawPage<T>>(path, {
@@ -68,7 +71,11 @@ export async function getPage<T>(path: string, query: PageQuery = {}, filters: Q
   return normalizePage(raw);
 }
 
-/** Trae un catálogo corto completo (para llenar un selector). */
-export async function getAll<T>(path: string, filters: QueryParams = {}, limit = 200): Promise<T[]> {
+/**
+ * Trae un catálogo corto completo en una sola página (para llenar un selector).
+ * Solo para catálogos chicos (medios de pago, timbrados, categorías, marcas, depósitos);
+ * productos, empleados, clientes y proveedores se eligen con un buscador paginado.
+ */
+export async function getAll<T>(path: string, filters: QueryParams = {}, limit = CATALOGO_MAX): Promise<T[]> {
   return (await getPage<T>(path, { page: 1, size: limit }, filters)).content;
 }

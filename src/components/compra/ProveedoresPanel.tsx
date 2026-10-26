@@ -13,18 +13,14 @@ import {
   type Column,
 } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useLocalPagedResource, useRemove } from '../../hooks';
+import { useAsyncAction, usePagedResource, useRemove } from '../../hooks';
 import { comprasApi } from '../../services';
 import { formatDocumento, formatPhone } from '../../lib/paraguay';
 import { PERSONA_VACIA, hasPersonaErrors, personaARequest, personaDesdeDto, personaErrors, type PersonaForm } from '../../lib/persona';
 import type { ProveedorResponseDTO } from '../../types/api';
-import { cargarProveedores } from './catalogos';
-
-const textoDeBusqueda = (p: ProveedorResponseDTO) =>
-  `${p.nombreFantasia ?? ''} ${p.persona.nombreCompleto} ${p.persona.ruc ?? ''} ${p.persona.ci ?? ''} ${p.persona.telefono ?? ''}`;
 
 export const ProveedoresPanel: React.FC = () => {
-  const proveedores = useLocalPagedResource(cargarProveedores, textoDeBusqueda);
+  const proveedores = usePagedResource(comprasApi.proveedores.list);
   const baja = useRemove(proveedores.reload);
   const [formOpen, setFormOpen] = useState(false);
   const [enEdicion, setEnEdicion] = useState<ProveedorResponseDTO | null>(null);
@@ -60,14 +56,13 @@ export const ProveedoresPanel: React.FC = () => {
 
   return (
     <>
-      {baja.error && <FeedbackBanner className="mb-4">{baja.error}</FeedbackBanner>}
+      {baja.error && <FeedbackBanner className="mb-3">{baja.error}</FeedbackBanner>}
 
       <PagedTable
         resource={proveedores}
         columns={columns}
         rowKey={(p) => p.idProveedor}
         label="proveedores"
-        searchPlaceholder="Buscar por nombre, RUC o teléfono..."
         filters={
           <Button variant="emerald" onClick={() => abrir(null)}>
             <Plus />

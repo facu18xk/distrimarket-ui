@@ -14,9 +14,26 @@ interface ModalDialogProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  /** Los formularios largos usan un modal ancho para repartir los campos en columnas y evitar scroll. */
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
 }
 
+const ANCHOS = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-xl',
+  '2xl': 'sm:max-w-2xl',
+  '3xl': 'sm:max-w-3xl',
+  '4xl': 'sm:max-w-4xl',
+  '5xl': 'sm:max-w-5xl',
+} as const;
+
+/**
+ * Modal de la aplicación. Nunca es más ancho ni más alto que la pantalla: en un teléfono deja un
+ * margen chico a los costados, y si el contenido no entra en alto, solo se desplaza el cuerpo
+ * (el título queda fijo). Nunca hay scroll horizontal.
+ */
 export const ModalDialog: React.FC<ModalDialogProps> = ({
   isOpen,
   onClose,
@@ -24,37 +41,25 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
   subtitle,
   children,
   maxWidth = 'lg',
-}) => {
-  const maxWidthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-  }[maxWidth];
-
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      {/* Un clic fuera no cierra el modal: no se pierde un formulario a medio cargar. Se cierra con la X, Cancelar o Esc. */}
-      <DialogContent
-        className={cn("p-0 overflow-hidden gap-0", maxWidthClasses)}
-        onInteractOutside={(event) => event.preventDefault()}
-      >
-        <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <DialogTitle className="text-base font-bold text-slate-900">{title}</DialogTitle>
-          {subtitle ? (
-            <DialogDescription className="text-xs text-slate-500 mt-0.5">
-              {subtitle}
-            </DialogDescription>
-          ) : (
-            <DialogDescription className="sr-only">Detalles del diálogo</DialogDescription>
-          )}
-        </DialogHeader>
-        <div className="p-6 max-h-[80vh] overflow-y-auto">
-          {children}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
+}) => (
+  <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    {/* Un clic fuera no cierra el modal: no se pierde un formulario a medio cargar. Se cierra con la X, Cancelar o Esc. */}
+    <DialogContent
+      className={cn(
+        'p-0 gap-0 overflow-hidden flex flex-col w-[calc(100vw-1rem)] max-w-none max-h-[calc(100dvh-1rem)]',
+        ANCHOS[maxWidth]
+      )}
+      onInteractOutside={(event) => event.preventDefault()}
+    >
+      <DialogHeader className="px-4 sm:px-5 py-2.5 pr-12 border-b border-slate-100 bg-slate-50/50 shrink-0 text-left">
+        <DialogTitle className="text-base font-bold text-slate-900">{title}</DialogTitle>
+        {subtitle ? (
+          <DialogDescription className="text-xs text-slate-500 mt-0.5">{subtitle}</DialogDescription>
+        ) : (
+          <DialogDescription className="sr-only">Detalles del diálogo</DialogDescription>
+        )}
+      </DialogHeader>
+      <div className="px-4 py-3 sm:px-5 sm:py-4 overflow-y-auto overflow-x-hidden min-h-0 flex-1">{children}</div>
+    </DialogContent>
+  </Dialog>
+);

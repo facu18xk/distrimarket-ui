@@ -9,8 +9,11 @@ import { getAll, getPage, type PageQuery, type PageResult } from './pagination';
  */
 export interface ReadResource<TResponse, TFilters extends QueryParams = QueryParams> {
   list: (query?: PageQuery, filters?: TFilters) => Promise<PageResult<TResponse>>;
+  /** Solo para catálogos chicos (ver services/catalogos): trae una única página. */
   all: (filters?: TFilters) => Promise<TResponse[]>;
   get: (id: number) => Promise<TResponse>;
+  /** Por id, como dato complementario de otra pantalla (un nombre en una tabla). */
+  ref: (id: number) => Promise<TResponse>;
 }
 
 export interface CrudResource<TResponse, TRequest, TFilters extends QueryParams = QueryParams>
@@ -28,6 +31,7 @@ export function readResource<TResponse, TFilters extends QueryParams = QueryPara
     list: (query, filters) => getPage<TResponse>(path, query, filters),
     all: (filters) => getAll<TResponse>(path, filters),
     get: (id) => http.get<TResponse>(`${path}/${id}`),
+    ref: (id) => http.getComplementario<TResponse>(`${path}/${id}`),
   };
 }
 

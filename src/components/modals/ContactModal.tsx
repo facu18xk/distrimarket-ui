@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ModalDialog } from '../common/ModalDialog';
 import { useApp } from '../../context/AppContext';
+import { SOPORTE_EMAIL } from '../../lib/contacto';
 
 export const ContactModal: React.FC = () => {
   const { contactModalOpen, setContactModalOpen, user, sendContactMessage, theme } = useApp();
@@ -43,7 +44,7 @@ export const ContactModal: React.FC = () => {
       isOpen={contactModalOpen}
       onClose={handleClose}
       title="Contactar al Equipo de Sistemas"
-      subtitle="Envía un ticket o consulta directa al correo de los administradores (soporte@distrimarket.com)"
+      subtitle={`Envía un ticket o consulta directa al correo de soporte (${SOPORTE_EMAIL})`}
       maxWidth="md"
     >
       {isSent ? (
@@ -134,7 +135,7 @@ export const ContactModal: React.FC = () => {
             <button
               type="submit"
               style={{ backgroundColor: theme.primaryHex }}
-              className="px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center space-x-2"
+              className="sobre-primario px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center space-x-2"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Enviar a Soporte</span>

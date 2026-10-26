@@ -49,11 +49,11 @@ export function DataTable<T>({
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs sm:text-sm">
+        <table className="w-full text-left border-collapse text-xs sm:text-[13px]">
           <thead>
             <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
               {columns.map((column) => (
-                <th key={column.header} className={cn('py-3 px-4', ALIGN[column.align ?? 'left'])}>
+                <th key={column.header} className={cn('py-2 px-3', ALIGN[column.align ?? 'left'])}>
                   {column.header}
                 </th>
               ))}
@@ -89,7 +89,7 @@ export function DataTable<T>({
                         className={cn('hover:bg-slate-50/60 transition-colors', onRowClick && 'cursor-pointer')}
                       >
                         {columns.map((column) => (
-                          <td key={column.header} className={cn('py-3.5 px-4', ALIGN[column.align ?? 'left'], column.className)}>
+                          <td key={column.header} className={cn('py-1.5 px-3', ALIGN[column.align ?? 'left'], column.className)}>
                             {column.cell(row)}
                           </td>
                         ))}
