@@ -4,7 +4,6 @@ import { ActionButtons, DepositoBuscador, FeedbackBanner, FormActions, FormField
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, usePagedResource, useRemove } from '../../hooks';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
-import { preferredId, rememberId } from '../../lib/preferences';
 import type { DepositoResponseDTO, ProductoResponseDTO, StockDepositoResponseDTO } from '../../types/api';
 
 type FiltrosExistencia = { depositoId?: number };
@@ -103,14 +102,14 @@ interface ExistenciaFormProps {
 const ExistenciaForm: React.FC<ExistenciaFormProps> = ({ existencia, onClose, onSaved }) => {
   const depositos = useAsyncData(depositosActivos);
   const guardar = useAsyncAction();
-  // undefined = todavía no se eligió: se propone el de la existencia o el último usado.
+  // undefined = todavía no se eligió: al corregir, se propone el de la existencia.
   const [elegido, setElegido] = useState<DepositoResponseDTO | null | undefined>(undefined);
   const [producto, setProducto] = useState<ProductoResponseDTO | null>(null);
   const [cantidad, setCantidad] = useState(String(existencia?.cantidad ?? ''));
 
   if (depositos.error) return <FeedbackBanner>{depositos.error}</FeedbackBanner>;
   if (!depositos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
-  const propuesto = existencia ? existencia.idDeposito : preferredId('deposito', depositos.data.map((d) => d.id));
+  const propuesto = existencia?.idDeposito;
   const deposito =
     elegido !== undefined
       ? elegido
@@ -126,7 +125,6 @@ const ExistenciaForm: React.FC<ExistenciaFormProps> = ({ existencia, onClose, on
       existencia ? inventarioApi.stock.update(existencia.id, request) : inventarioApi.stock.create(request)
     );
     if (ok) {
-      rememberId('deposito', deposito.id);
       onSaved();
       onClose();
     }

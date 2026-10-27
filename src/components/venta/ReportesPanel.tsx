@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { useApp } from '../../context/AppContext';
 import { useAsyncData } from '../../hooks';
 import { catalogos, inventarioApi, ventasApi, type FacturaVentaFilters } from '../../services';
-import { indexar } from '../../lib/catalogCache';
+import { indexar } from '../../lib/indices';
 import { enTandas } from '../../lib/tandas';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { cn } from '../../lib/utils';

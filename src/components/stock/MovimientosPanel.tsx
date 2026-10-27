@@ -18,7 +18,6 @@ import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, useEmpleadoPorDefecto, usePagedResource } from '../../hooks';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
-import { preferredId, rememberId } from '../../lib/preferences';
 import type { AjusteStockResponseDTO, DepositoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
 
 type Movimiento = 'ajuste' | 'transferencia';
@@ -51,7 +50,7 @@ const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
 type FiltroAjustes = { depositoId?: number };
 type FiltroTransferencias = { depositoOrigenId?: number };
 
-/** Filtro por depósito: el mismo buscador de los formularios, sobre el catálogo chico de la sesión. */
+/** Filtro por depósito: el mismo buscador de los formularios, sobre el catálogo de depósitos. */
 const FiltroDeposito: React.FC<{ value: DepositoResponseDTO | null; onChange: (deposito: DepositoResponseDTO | null) => void; depositos: DepositoResponseDTO[] | null; titulo: string }> = ({
   value,
   onChange,
@@ -155,13 +154,12 @@ const MovimientoFormModal: React.FC<MovimientoFormProps & { isOpen: boolean }> =
 /**
  * Formulario cabecera-detalle común a ajustes y transferencias: cambia la
  * cabecera (un depósito y un tipo, o dos depósitos) y el detalle es el mismo.
- * Depósitos: catálogo chico de la sesión. Responsable y productos: selectores paginados.
+ * Depósitos: catálogo chico pedido al backend. Responsable y productos: selectores paginados.
  */
 const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved }) => {
   const depositos = useAsyncData(depositosActivos);
   const guardar = useAsyncAction();
-  // undefined = todavía no se eligió: se propone el último depósito usado.
-  const [origenElegido, setOrigenElegido] = useState<DepositoResponseDTO | null | undefined>(undefined);
+  const [deposito, setDeposito] = useState<DepositoResponseDTO | null>(null);
   const [destino, setDestino] = useState<DepositoResponseDTO | null>(null);
   const [empleado, setEmpleado] = useEmpleadoPorDefecto();
   const [tipoAjuste, setTipoAjuste] = useState<TipoAjuste>('NEGATIVO');
@@ -172,8 +170,6 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
   if (!depositos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
   const lista = depositos.data;
 
-  const recordado = preferredId('deposito', lista.map((d) => d.id));
-  const deposito = origenElegido !== undefined ? origenElegido : (lista.find((d) => d.id === recordado) ?? null);
   const mismoDeposito = tipo === 'transferencia' && destino !== null && deposito !== null && destino.id === deposito.id;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,8 +188,6 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
           })
     );
     if (ok) {
-      rememberId('deposito', deposito.id);
-      rememberId('empleado', empleado.id);
       onSaved();
       onClose();
     }
@@ -203,7 +197,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <FormField label={tipo === 'ajuste' ? 'Depósito' : 'Depósito de origen'} required>
-          <DepositoBuscador required depositos={lista} value={deposito} onChange={setOrigenElegido} />
+          <DepositoBuscador required depositos={lista} value={deposito} onChange={setDeposito} />
         </FormField>
 
         {tipo === 'ajuste' ? (

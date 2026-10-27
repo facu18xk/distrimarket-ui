@@ -61,7 +61,7 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
   const accion = useAsyncAction();
   const confirm = useConfirm();
   // La factura trae solo ids de inventario: cada producto distinto y el vendedor se piden por id
-  // (inventario los responde desde Redis). El depósito sale del catálogo chico de la sesión.
+  // (inventario los responde desde Redis). El depósito sale del catálogo de depósitos.
   const productoPorId = usePorId(inventarioApi.productos.ref, factura.detalles.map((d) => d.idProducto));
   const empleadoPorId = usePorId(inventarioApi.empleados.ref, [factura.idEmpleado]);
   const empleado = factura.idEmpleado ? empleadoPorId.get(factura.idEmpleado) : undefined;

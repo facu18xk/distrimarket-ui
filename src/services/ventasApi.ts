@@ -37,8 +37,8 @@ export const ventasApi = {
     patch: (id: number, body: ClientePatchRequestDTO) =>
       http.patch<ClienteResponseDTO>(`/ventas/clientes/${id}`, body),
   },
-  mediosPago: crudResource<MedioPagoDTO, MedioPagoRequestDTO>('/ventas/medios-pago', 'mediosPago'),
-  timbrados: crudResource<TimbradoDTO, TimbradoCreateDTO>('/ventas/timbrados', 'timbrados'),
+  mediosPago: crudResource<MedioPagoDTO, MedioPagoRequestDTO>('/ventas/medios-pago'),
+  timbrados: crudResource<TimbradoDTO, TimbradoCreateDTO>('/ventas/timbrados'),
   /**
    * El listado trae solo cabeceras (FacturaVentaResumenDTO); la factura completa, con sus
    * líneas, se pide por id recién cuando se abre.

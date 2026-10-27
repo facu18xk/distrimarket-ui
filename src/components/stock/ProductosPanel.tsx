@@ -15,12 +15,12 @@ import {
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, usePagedResource, useRemove } from '../../hooks';
 import { catalogos, depositosActivos, errorMessage, inventarioApi } from '../../services';
-import { indexar } from '../../lib/catalogCache';
+import { indexar } from '../../lib/indices';
 import { formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import type { DepositoResponseDTO, ProductoRequestDTO, ProductoResponseDTO } from '../../types/api';
 
-/** Categorías y marcas: catálogos chicos guardados en la sesión (filtros, nombres y formulario). */
+/** Categorías y marcas: catálogos chicos pedidos al backend (filtros, nombres y formulario). */
 async function cargarClasificaciones() {
   const [categorias, marcas] = await Promise.all([catalogos.categorias(), catalogos.marcas()]);
   return { categorias, marcas };

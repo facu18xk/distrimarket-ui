@@ -5,8 +5,6 @@ import { THEME_PALETTES } from '../lib/theme';
 import { esHexValido, temaDesdeHex, textoSobre } from '../lib/color';
 import { canAccess as rolesCanAccess, homeModule, rolesLabel } from '../auth/roles';
 import { serverErrors, session, type Session } from '../auth/session';
-import { limpiarCatalogos } from '../lib/catalogCache';
-import { olvidarPaginas } from '../services/paginasEnMemoria';
 import { LOGIN_PATH, MODULE_PATHS, resolveRoute, type Route } from '../routing/routes';
 import { authApi, errorMessage } from '../services';
 
@@ -160,8 +158,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     (notice: string | null) => {
       session.clear();
       // Los catálogos guardados son de esta sesión: el próximo usuario los vuelve a pedir.
-      limpiarCatalogos();
-      olvidarPaginas();
       setCurrent(null);
       setProfile(null);
       setServerError(null);
@@ -234,8 +230,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = async (username: string, password: string): Promise<LoginResult> => {
     try {
       const token = await authApi.login({ username: username.trim(), password });
-      limpiarCatalogos();
-      olvidarPaginas();
       const nueva = session.start(token);
       setCurrent(nueva);
       setLoginNotice(null);

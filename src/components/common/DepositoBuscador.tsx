@@ -6,7 +6,7 @@ import { cn } from '../../lib/utils';
 import type { DepositoResponseDTO } from '../../types/api';
 
 interface DepositoBuscadorProps {
-  /** Depósitos entre los que se busca (el catálogo chico de la sesión). */
+  /** Depósitos entre los que se busca (el catálogo que la pantalla pidió al backend). */
   depositos: DepositoResponseDTO[];
   value: DepositoResponseDTO | null;
   onChange: (deposito: DepositoResponseDTO | null) => void;
@@ -25,7 +25,7 @@ const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g,
 /**
  * Buscador de depósito por nombre o ubicación, como el de cliente en la factura: se escribe,
  * se elige con el mouse o con las flechas y Enter. Busca en el catálogo de depósitos ya cargado
- * (inventario no busca por texto), así que no hace pedidos al backend.
+ * (inventario no busca por texto), así que buscar no hace pedidos al backend.
  */
 export const DepositoBuscador: React.FC<DepositoBuscadorProps> = ({ depositos, value, onChange, excluir = [], required = false, disabled = false, placeholder = 'Buscar depósito por nombre o ubicación...' }) => {
   const [texto, setTexto] = useState('');

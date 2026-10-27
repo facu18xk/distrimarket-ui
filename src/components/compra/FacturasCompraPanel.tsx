@@ -7,6 +7,7 @@ import {
   FormField,
   LineItemsEditor,
   ModalDialog,
+  DepositoBuscador,
   PagedTable,
   ProveedorPicker,
   StatusBadge,
@@ -19,8 +20,7 @@ import { comprasApi } from '../../services';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
 import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, normalizeTimbrado, padNumeroFactura } from '../../lib/paraguay';
-import { preferredId, rememberId } from '../../lib/preferences';
-import type { CondicionCompra, FacturaCompraResponseDTO, ProveedorResponseDTO } from '../../types/api';
+import type { CondicionCompra, DepositoResponseDTO, FacturaCompraResponseDTO, ProveedorResponseDTO } from '../../types/api';
 import { cargarCatalogosCompra } from './catalogos';
 import { nombreProveedor } from '../../lib/proveedor';
 import { ProveedorFormModal } from './ProveedoresPanel';
@@ -123,7 +123,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   const [timbrado, setTimbrado] = useState('');
   const [fechaEmision, setFechaEmision] = useState(todayIso());
   const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
-  const [idDeposito, setIdDeposito] = useState<number | ''>('');
+  const [deposito, setDeposito] = useState<DepositoResponseDTO | null>(null);
   const [idMedioPago, setIdMedioPago] = useState<number | ''>('');
   const [condicion, setCondicion] = useState<CondicionCompra>('CONTADO');
   const [lineas, setLineas] = useState<LineItem[]>([newLineItem()]);
@@ -133,28 +133,26 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   if (!catalogos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
   const { depositos, mediosPago } = catalogos.data;
 
-  const deposito = idDeposito !== '' ? idDeposito : preferredId('deposito', depositos.map((d) => d.id));
   const numeroCompleto = padNumeroFactura(numeroFactura);
   const errorNumero = numeroFactura && !NUMERO_FACTURA_PATTERN.test(numeroCompleto) ? 'El número debe tener el formato 001-001-0000001.' : null;
   const errorTimbrado = timbrado && timbrado.length !== 8 ? 'El timbrado tiene 8 dígitos.' : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorNumero || errorTimbrado || !proveedor) return;
+    if (errorNumero || errorTimbrado || !proveedor || !deposito) return;
     const ok = await guardar.run(() =>
       comprasApi.facturas.create({
         numeroFactura: numeroCompleto,
         fechaEmision,
         timbrado,
         idProveedor: proveedor.idProveedor,
-        idDeposito: Number(deposito),
+        idDeposito: deposito.id,
         idMedioPago: Number(idMedioPago),
         condicionCompra: condicion,
         detalles: lineas.filter((l) => l.producto).map((l) => ({ idProducto: l.producto!.id, cantidad: l.cantidad, precioUnitario: l.precioUnitario })),
       })
     );
     if (ok) {
-      rememberId('deposito', deposito);
       onSaved();
       onClose();
     }
@@ -223,13 +221,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
             </select>
           </FormField>
           <FormField label="Depósito de ingreso" required hint="Aquí se suma el stock.">
-            <select className={fieldClass} required value={deposito} onChange={(e) => setIdDeposito(Number(e.target.value))}>
-              {depositos.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nombre}
-                </option>
-              ))}
-            </select>
+            <DepositoBuscador required depositos={depositos} value={deposito} onChange={setDeposito} />
           </FormField>
         </div>
 

@@ -7,7 +7,6 @@
  * de Vite; ver vite.config.ts). Así el navegador no necesita CORS.
  */
 import { serverErrors, session } from '../auth/session';
-import { olvidarPaginas } from './paginasEnMemoria';
 
 const GATEWAY_URL: string = (import.meta.env.VITE_API_GATEWAY_URL ?? '').replace(/\/$/, '');
 
@@ -126,8 +125,6 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     throw new ApiError(response.status, message, body);
   }
 
-  // Un cambio confirmado deja viejas las páginas recordadas de los listados.
-  if (method !== 'GET') olvidarPaginas();
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }

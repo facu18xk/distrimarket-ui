@@ -1,5 +1,4 @@
 import { http, type QueryParams } from './http';
-import { invalidar } from '../lib/catalogCache';
 import { getAll, getPage, type PageQuery, type PageResult } from './pagination';
 
 /**
@@ -35,23 +34,13 @@ export function readResource<TResponse, TFilters extends QueryParams = QueryPara
   };
 }
 
-/**
- * @param catalogo si el recurso se guarda como catálogo de la sesión (ver services/catalogos),
- *        crear, modificar o dar de baja lo invalida para que la próxima lectura venga del backend.
- */
 export function crudResource<TResponse, TRequest, TFilters extends QueryParams = QueryParams>(
-  path: string,
-  catalogo?: string
+  path: string
 ): CrudResource<TResponse, TRequest, TFilters> {
-  const yInvalidar = async <T>(operacion: Promise<T>): Promise<T> => {
-    const resultado = await operacion;
-    if (catalogo) invalidar(catalogo);
-    return resultado;
-  };
   return {
     ...readResource<TResponse, TFilters>(path),
-    create: (body) => yInvalidar(http.post<TResponse>(path, body)),
-    update: (id, body) => yInvalidar(http.put<TResponse>(`${path}/${id}`, body)),
-    remove: (id) => yInvalidar(http.delete(`${path}/${id}`)),
+    create: (body) => http.post<TResponse>(path, body),
+    update: (id, body) => http.put<TResponse>(`${path}/${id}`, body),
+    remove: (id) => http.delete(`${path}/${id}`),
   };
 }

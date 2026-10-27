@@ -1,12 +1,11 @@
 import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, padNumeroFactura, prefijoFactura } from '../../lib/paraguay';
-import type { ClienteResponseDTO } from '../../types/api';
+import type { ClienteResponseDTO, DepositoResponseDTO } from '../../types/api';
 import { ClienteFormModal } from './ClienteFormModal';
 import { ClientePicker } from './ClientePicker';
 import React, { useCallback, useState } from 'react';
 import { Receipt } from 'lucide-react';
-import { EmpleadoPicker, FeedbackBanner, FormActions, FormField, LineItemsEditor, ModalDialog, fieldClass } from '../common';
+import { DepositoBuscador, EmpleadoPicker, FeedbackBanner, FormActions, FormField, LineItemsEditor, ModalDialog, fieldClass } from '../common';
 import { lineasADetalle, lineasDesdeDetalle, newLineItem, type LineItem } from '../../lib/lineItems';
-import { preferredId, rememberId } from '../../lib/preferences';
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, useEmpleadoPorDefecto } from '../../hooks';
 import { catalogos, depositosActivos, inventarioApi, ventasApi } from '../../services';
@@ -23,7 +22,7 @@ interface FacturaFormModalProps {
 }
 
 /**
- * Catálogos chicos del formulario (de la sesión): medios de pago, timbrados y depósitos.
+ * Catálogos chicos del formulario (pedidos al backend): medios de pago, timbrados y depósitos.
  * Vendedor y productos se eligen con selectores paginados, sin cargar listas enteras.
  */
 async function cargarCatalogos() {
@@ -103,9 +102,10 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
   const [cliente, setCliente] = useState<ClienteResponseDTO | null>(factura ? clienteDeFactura(factura) : null);
   // Texto con el que se abre el alta de cliente; null = cerrada.
   const [altaCliente, setAltaCliente] = useState<string | null>(null);
-  // Vendedor: el de la factura, el usuario que inició sesión (si es empleado) o el último usado.
+  // Vendedor: el de la factura o el usuario que inició sesión (si es empleado).
   const [empleado, setEmpleado] = useEmpleadoPorDefecto(factura?.idEmpleado);
-  const [idDeposito, setIdDeposito] = useState<number | ''>(factura?.idDeposito ?? '');
+  // undefined = todavía no se eligió: al modificar, se propone el depósito de la factura.
+  const [depositoElegido, setDeposito] = useState<DepositoResponseDTO | null | undefined>(undefined);
   const [idMedioPago, setIdMedioPago] = useState<number | ''>(factura?.idMedioPago ?? '');
   const [idTimbrado, setIdTimbrado] = useState<number | ''>(factura?.idTimbrado ?? '');
   const [lineas, setLineas] = useState<LineItem[]>(() => (lineasIniciales && lineasIniciales.length > 0 ? lineasIniciales : [newLineItem()]));
@@ -137,13 +137,13 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorNumero || !cliente || !empleado) return;
+    if (errorNumero || !cliente || !empleado || !deposito) return;
     const request: FacturaVentaRequestDTO = {
       numeroFactura: numeroValido ? padNumeroFactura(numeroFactura) : numeroFactura.trim(),
       fechaEmision,
       idCliente: cliente?.idCliente ?? 0,
       idEmpleado: empleado.id,
-      idDeposito: Number(depositoElegido),
+      idDeposito: deposito.id,
       idMedioPago: Number(idMedioPago),
       idTimbrado: Number(idTimbrado),
       detalles: lineasADetalle(lineas),
@@ -152,8 +152,6 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
       factura ? ventasApi.facturas.update(factura.idFacturaVenta, request) : ventasApi.facturas.create(request)
     );
     if (ok) {
-      rememberId('empleado', empleado.id);
-      rememberId('deposito', depositoElegido);
       onSaved();
       onClose();
     }
@@ -161,9 +159,7 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
 
   const datos = catalogos.data;
 
-  // El depósito propuesto es el último usado.
-  const depositoElegido =
-    idDeposito !== '' || !datos ? idDeposito : preferredId('deposito', datos.depositos.map((d) => d.id));
+  const deposito = depositoElegido !== undefined ? depositoElegido : (datos?.depositos.find((d) => d.id === factura?.idDeposito) ?? null);
 
   return (
     <>
@@ -231,14 +227,7 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
             </FormField>
 
             <FormField label="Depósito de salida" required hint="De aquí se descuenta el stock." className="sm:col-span-2">
-              <select className={fieldClass} required value={depositoElegido} onChange={(e) => setIdDeposito(idONada(e.target.value))}>
-                <option value="">Seleccionar...</option>
-                {datos.depositos.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.nombre}
-                  </option>
-                ))}
-              </select>
+              <DepositoBuscador required depositos={datos.depositos} value={deposito} onChange={setDeposito} />
             </FormField>
           </div>
 

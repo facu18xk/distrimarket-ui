@@ -52,20 +52,20 @@ Los roles y sus módulos se definen en `src/auth/roles.ts`.
 - **Errores**: si el backend falla al cargar datos (5xx o sin conexión) se muestra la página
   **500** con "Reintentar"; si una pantalla se rompe al dibujarse, `ErrorBoundary` muestra la
   misma página. Un **401 o 403** cierra la sesión y vuelve al login con el motivo.
+- **Sin caché en el navegador**: la UI solo guarda los datos del usuario (sesión, color y foto,
+  en `localStorage`). Todo lo demás se pide al backend cada vez, que lo responde desde su caché
+  **Redis**; así cada GET y SET queda a la vista en Redis.
 - **Tablas de 10 por página**: cada listado pide una página al backend (`usePagedResource`);
-  "Ir a página" usa el total de páginas que informa el backend. La página traída se recuerda en
-  memoria un minuto (`src/services/paginasEnMemoria.ts`) y se olvida ante cualquier alta,
-  modificación o baja.
-- **Catálogos chicos en `sessionStorage`** (`src/services/catalogos.ts`): solo depósitos,
-  categorías, marcas, medios de pago y timbrados. Productos, empleados, clientes, proveedores y
-  facturas **no** se guardan en el navegador: se eligen con selectores paginados (`RemotePicker`)
-  y sus nombres se piden por id una vez por pantalla (`usePorId`), así el backend responde desde
-  Redis y cada GET queda a la vista. Las tablas no muestran ids técnicos.
+  "Ir a página" usa el total de páginas que informa el backend.
+- **Catálogos chicos** (`src/services/catalogos.ts`): depósitos, categorías, marcas, medios de
+  pago y timbrados se piden en una sola página para llenar selectores. Productos, empleados,
+  clientes y proveedores se eligen con selectores paginados (`RemotePicker`) y sus nombres se
+  piden por id, una vez por id distinto en la pantalla (`usePorId`). Las tablas no muestran ids técnicos.
 - **Facturas de venta**: el listado trae solo cabeceras; la factura con sus líneas se pide al abrirla.
 - **Producto con existencia inicial**: el alta de producto permite cargar la cantidad en cada
   depósito; se crea el producto y después una existencia por depósito (si alguna falla, se
   reintenta solo esa, sin duplicar el producto).
-- **Color de la interfaz**: colores rápidos o rueda de colores con código hex, guardado en el navegador.
+- **Color de la interfaz**: colores rápidos o rueda de colores con código hex (preferencia del usuario, guardada en el navegador).
 - **Soporte**: `VITE_SOPORTE_EMAIL` (por defecto soporte.distrimarket@gmail.com).
 - **Servidor UI**: el pie muestra qué nodo respondió (`VITE_UI_NODE`), para el balanceador.
 
