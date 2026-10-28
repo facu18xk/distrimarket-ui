@@ -7,7 +7,6 @@ import { useApp } from '../../context/AppContext';
 import { inventarioApi } from '../../services';
 import type { DepositoResponseDTO } from '../../types/api';
 
-/** Depósitos: todos los consultan; crearlos, modificarlos y darlos de baja es solo de ADMIN. */
 export const DepositosPanel: React.FC = () => {
   const { isAdmin } = useApp();
   const depositos = usePagedResource(inventarioApi.depositos.list);
@@ -26,22 +25,22 @@ export const DepositosPanel: React.FC = () => {
     { header: 'Estado', cell: (d) => <StatusBadge status={d.estado ? 'Activo' : 'Inactivo'} /> },
     ...(isAdmin
       ? [
-          {
-            header: 'Acciones',
-            align: 'center' as const,
-            cell: (d: DepositoResponseDTO) => (
-              <ActionButtons
-                onEdit={() => abrir(d)}
-                onDelete={() =>
-                  baja.remove(
-                    { title: 'Dar de baja depósito', message: `¿Dar de baja "${d.nombre}"? Debe quedar sin stock para poder darlo de baja.` },
-                    () => inventarioApi.depositos.remove(d.id)
-                  )
-                }
-              />
-            ),
-          },
-        ]
+        {
+          header: 'Acciones',
+          align: 'center' as const,
+          cell: (d: DepositoResponseDTO) => (
+            <ActionButtons
+              onEdit={() => abrir(d)}
+              onDelete={() =>
+                baja.remove(
+                  { title: 'Dar de baja depósito', message: `¿Dar de baja "${d.nombre}"? Debe quedar sin stock para poder darlo de baja.` },
+                  () => inventarioApi.depositos.remove(d.id)
+                )
+              }
+            />
+          ),
+        },
+      ]
       : []),
   ];
 
