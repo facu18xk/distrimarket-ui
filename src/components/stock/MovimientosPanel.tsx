@@ -129,7 +129,7 @@ export const AjustesPanel: React.FC = () => {
         columns={[...columnasAjustes, columnaVer(setDetalle)]}
         rowKey={(a) => a.id}
         label="ajustes"
-        searchPlaceholder="Buscar por motivo, depósito o responsable..."
+        searchPlaceholder="Buscar por depósito, motivo o responsable..."
         onRowClick={setDetalle}
         filters={
           <>
@@ -172,7 +172,7 @@ export const TransferenciasPanel: React.FC = () => {
         columns={[...columnasTransferencias, columnaVer(setDetalle)]}
         rowKey={(t) => t.id}
         label="transferencias"
-        searchPlaceholder="Buscar por depósito, observación o responsable..."
+        searchPlaceholder="Buscar por depósito o responsable..."
         onRowClick={setDetalle}
         filters={
           <>

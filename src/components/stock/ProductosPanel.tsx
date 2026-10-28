@@ -91,7 +91,7 @@ export const ProductosPanel: React.FC = () => {
         columns={columns}
         rowKey={(p) => p.id}
         label="productos"
-        searchPlaceholder="Buscar por nombre, código de barras o descripción..."
+        searchPlaceholder="Buscar por nombre o código de barras..."
         emptyMessage="No hay productos con la búsqueda o los filtros elegidos."
         filters={
           <>

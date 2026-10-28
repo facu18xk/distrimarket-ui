@@ -72,7 +72,7 @@ export const ExistenciasPanel: React.FC = () => {
         columns={columns}
         rowKey={(s) => s.id}
         label="existencias"
-        searchPlaceholder="Buscar por producto, código de barras o depósito..."
+        searchPlaceholder="Buscar por producto o depósito..."
         filters={
           <>
             <div className="w-full sm:w-64">
