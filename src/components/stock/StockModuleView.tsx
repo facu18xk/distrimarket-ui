@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { PagedTable, StatusBadge, SubTabs, type Column, type SubTab } from '../common';
-import { usePagedResource } from '../../hooks';
-import { inventarioApi } from '../../services';
-import type { DepositoResponseDTO } from '../../types/api';
+import { SubTabs, type SubTab } from '../common';
+import { DepositosPanel } from './DepositosPanel';
 import { ExistenciasPanel } from './ExistenciasPanel';
 import { AjustesPanel, TransferenciasPanel } from './MovimientosPanel';
 import { ProductosPanel } from './ProductosPanel';
@@ -17,23 +15,6 @@ const TABS: SubTab<Tab>[] = [
   { id: 'depositos', label: 'Depósitos' },
 ];
 
-const columnasDepositos: Column<DepositoResponseDTO>[] = [
-  { header: 'Depósito', cell: (d) => d.nombre, className: 'font-bold text-slate-900' },
-  { header: 'Ubicación', cell: (d) => d.ubicacion ?? '—', className: 'text-slate-600' },
-  { header: 'Estado', cell: (d) => <StatusBadge status={d.estado ? 'Activo' : 'Inactivo'} /> },
-];
-
-const DepositosPanel: React.FC = () => {
-  const depositos = usePagedResource(inventarioApi.depositos.list);
-  return (
-    <PagedTable
-      resource={depositos}
-      columns={columnasDepositos}
-      rowKey={(d) => d.id}
-      label="depósitos"
-    />
-  );
-};
 
 /** Módulo de stock: todo sale del microservicio de inventario a través del gateway. */
 export const StockModuleView: React.FC = () => {

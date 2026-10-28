@@ -28,6 +28,7 @@ const paginaDeClientes = (query: PageQuery) => ventasApi.clientes.list(query);
 export const ProductoPicker: FC<PickerProps<ProductoResponseDTO> & { mostrarPrecio?: boolean }> = ({ mostrarPrecio = true, ...props }) => (
   <RemotePicker
     {...props}
+    buscable
     buscarPagina={paginaDeProductos}
     clave={(p) => p.id}
     etiqueta={(p) => p.nombre}
@@ -40,6 +41,7 @@ export const ProductoPicker: FC<PickerProps<ProductoResponseDTO> & { mostrarPrec
 export const EmpleadoPicker: FC<PickerProps<EmpleadoResponseDTO>> = (props) => (
   <RemotePicker
     {...props}
+    buscable
     buscarPagina={paginaDeEmpleadosActivos}
     clave={(e) => e.id}
     etiqueta={(e) => e.persona.nombreCompleto}
@@ -51,6 +53,7 @@ export const EmpleadoPicker: FC<PickerProps<EmpleadoResponseDTO>> = (props) => (
 export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO>> = (props) => (
   <RemotePicker
     {...props}
+    buscable
     buscarPagina={paginaDeProveedores}
     clave={(p) => p.idProveedor}
     etiqueta={(p) => nombreProveedor(p)}

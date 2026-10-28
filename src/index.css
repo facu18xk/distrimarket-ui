@@ -31,3 +31,19 @@ html {
 .fuera-de-primario {
   --color-white: #ffffff;
 }
+
+/*
+ * Campos numéricos dentro de tablas (cantidad, precio de una línea): sin las flechitas del
+ * navegador, que en una celda angosta tapaban el número. Se escribe o se usa el teclado.
+ */
+td input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
+}
+td input[type='number']::-webkit-inner-spin-button,
+td input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

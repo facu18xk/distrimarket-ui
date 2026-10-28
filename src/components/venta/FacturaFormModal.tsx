@@ -7,7 +7,7 @@ import { Receipt } from 'lucide-react';
 import { DepositoBuscador, EmpleadoPicker, FeedbackBanner, FormActions, FormField, LineItemsEditor, ModalDialog, fieldClass } from '../common';
 import { lineasADetalle, lineasDesdeDetalle, newLineItem, type LineItem } from '../../lib/lineItems';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useEmpleadoPorDefecto } from '../../hooks';
+import { useAsyncAction, useAsyncData, useDepositoAsignado, useEmpleadoPorDefecto } from '../../hooks';
 import { catalogos, depositosActivos, inventarioApi, ventasApi } from '../../services';
 import { todayIso } from '../../lib/format';
 import type { FacturaVentaRequestDTO, FacturaVentaResponseDTO } from '../../types/api';
@@ -106,6 +106,7 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
   const [empleado, setEmpleado] = useEmpleadoPorDefecto(factura?.idEmpleado);
   // undefined = todavía no se eligió: al modificar, se propone el depósito de la factura.
   const [depositoElegido, setDeposito] = useState<DepositoResponseDTO | null | undefined>(undefined);
+  const asignado = useDepositoAsignado();
   const [idMedioPago, setIdMedioPago] = useState<number | ''>(factura?.idMedioPago ?? '');
   const [idTimbrado, setIdTimbrado] = useState<number | ''>(factura?.idTimbrado ?? '');
   const [lineas, setLineas] = useState<LineItem[]>(() => (lineasIniciales && lineasIniciales.length > 0 ? lineasIniciales : [newLineItem()]));
@@ -159,7 +160,10 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
 
   const datos = catalogos.data;
 
-  const deposito = depositoElegido !== undefined ? depositoElegido : (datos?.depositos.find((d) => d.id === factura?.idDeposito) ?? null);
+  // El vendedor vende siempre desde su depósito asignado (el backend también lo impone).
+  const deposito =
+    asignado ??
+    (depositoElegido !== undefined ? depositoElegido : (datos?.depositos.find((d) => d.id === factura?.idDeposito) ?? null));
 
   return (
     <>
@@ -227,7 +231,7 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
             </FormField>
 
             <FormField label="Depósito de salida" required hint="De aquí se descuenta el stock." className="sm:col-span-2">
-              <DepositoBuscador required depositos={datos.depositos} value={deposito} onChange={setDeposito} />
+              <DepositoBuscador required={!asignado} disabled={Boolean(asignado)} depositos={datos.depositos} value={deposito} onChange={setDeposito} />
             </FormField>
           </div>
 

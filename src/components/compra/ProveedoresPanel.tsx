@@ -63,6 +63,7 @@ export const ProveedoresPanel: React.FC = () => {
         columns={columns}
         rowKey={(p) => p.idProveedor}
         label="proveedores"
+        searchPlaceholder="Buscar por nombre, razón social, RUC o CI..."
         filters={
           <Button variant="emerald" onClick={() => abrir(null)}>
             <Plus />
@@ -71,7 +72,9 @@ export const ProveedoresPanel: React.FC = () => {
         }
       />
 
-      <ProveedorFormModal isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={proveedores.reload} proveedor={enEdicion} />
+      <ProveedorFormModal isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={(p) => (enEdicion ? proveedores.replaceItem((row) => row.idProveedor === p.idProveedor, p) : proveedores.reload())}
+        proveedor={enEdicion}
+      />
     </>
   );
 };

@@ -124,7 +124,10 @@ export interface ProductoResponseDTO {
   id: number;
   codigoBarra?: string | null;
   nombre: string;
+  descripcion?: string;
+  precioCosto?: number;
   precioVenta: number;
+  stockMinimo?: number;
   stockActual?: number;
   porcentajeIva: number;
   idCategoria: number;
@@ -154,6 +157,23 @@ export interface EmpleadoResponseDTO {
   fechaIngreso: string;
   estado: boolean;
   persona: PersonaResponseDTO;
+  /** Depósito donde trabaja: vendedor, comprador y depositero operan siempre sobre él. */
+  idDeposito?: number;
+  nombreDeposito?: string;
+}
+
+export interface EmpleadoRequestDTO {
+  cargo: string;
+  fechaIngreso: string;
+  estado?: boolean;
+  persona: PersonaRequestDTO;
+  idDeposito?: number;
+}
+
+export interface DepositoRequestDTO {
+  nombre: string;
+  ubicacion?: string;
+  estado?: boolean;
 }
 
 // ------------------------------------------------------------------ Compras
@@ -213,6 +233,7 @@ export interface OrdenCompraDTO {
   estado?: string;
   observacion?: string;
   total?: number;
+  detalles?: { id: number; idProducto: number; cantidad: number; precioUnitario: number; subtotal: number }[];
 }
 
 // ------------------------------------------- Inventario: altas y movimientos
@@ -342,6 +363,7 @@ export interface TokenResponseDTO {
   roles: RolUsuario[];
   idPersona?: number;
   idEmpleado?: number;
+  idDeposito?: number;
 }
 
 export interface UsuarioResponseDTO {
@@ -354,6 +376,8 @@ export interface UsuarioResponseDTO {
   documento?: string;
   idEmpleado?: number;
   cargo?: string;
+  idDeposito?: number;
+  nombreDeposito?: string;
 }
 
 /** Se indica idPersona o idEmpleado (uno de los dos). */
@@ -370,4 +394,48 @@ export interface UsuarioUpdateRequestDTO {
   username: string;
   password?: string;
   roles: RolUsuario[];
+}
+
+// ------------------------------------------------- Ventas: soporte y promociones
+
+export interface ContactoMensajeRequestDTO {
+  nombre: string;
+  correo: string;
+  asunto: string;
+  mensaje: string;
+}
+
+export interface ContactoMensajeResponseDTO extends ContactoMensajeRequestDTO {
+  id: number;
+  fechaEnvio: string;
+  atendido: boolean;
+  /** Si el job ya lo reenvió al correo de soporte. */
+  correoEnviado: boolean;
+  errorCorreo?: string;
+}
+
+export interface PromocionRequestDTO {
+  titulo: string;
+  mensaje: string;
+  porcentajeDescuento?: number;
+  fechaInicio?: string;
+  fechaFin?: string;
+  /** Se envía a quienes compraron alguno de los productos en estos últimos días. */
+  diasHistorial?: number;
+  /** Cuándo enviarla (ISO); vacío = queda pendiente hasta "Enviar ahora". */
+  fechaEnvio?: string;
+  idsProducto: number[];
+}
+
+export interface PromocionResponseDTO extends Omit<PromocionRequestDTO, 'diasHistorial'> {
+  id: number;
+  diasHistorial: number;
+  enviado: boolean;
+  activo: boolean;
+  /** Clientes a los que ya se les envió. */
+  correosEnviados?: number;
+}
+
+export interface PromocionDestinatariosDTO {
+  clientes: number;
 }

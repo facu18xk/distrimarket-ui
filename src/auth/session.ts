@@ -13,6 +13,8 @@ export interface Session {
   roles: RolUsuario[];
   idPersona?: number;
   idEmpleado?: number;
+  /** Depósito asignado al empleado (viene en el token). */
+  idDeposito?: number;
 }
 
 const KEY = 'distrimarket_session';
@@ -48,6 +50,7 @@ export const session = {
       roles: token.roles,
       idPersona: token.idPersona,
       idEmpleado: token.idEmpleado,
+      idDeposito: token.idDeposito,
     };
     localStorage.setItem(KEY, JSON.stringify(value));
     return value;

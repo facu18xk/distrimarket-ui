@@ -4,7 +4,9 @@ import type {
   AjusteStockRequestDTO,
   AjusteStockResponseDTO,
   CategoriaResponseDTO,
+  DepositoRequestDTO,
   DepositoResponseDTO,
+  EmpleadoRequestDTO,
   EmpleadoResponseDTO,
   MarcaResponseDTO,
   PersonaResponseDTO,
@@ -24,8 +26,9 @@ export const inventarioApi = {
   productos: crudResource<ProductoResponseDTO, ProductoRequestDTO, { categoriaId?: number; marcaId?: number }>('/inventario/productos'),
   categorias: readResource<CategoriaResponseDTO>('/inventario/categorias'),
   marcas: readResource<MarcaResponseDTO>('/inventario/marcas'),
-  depositos: readResource<DepositoResponseDTO>('/inventario/depositos'),
-  empleados: readResource<EmpleadoResponseDTO, { cargo?: string; estado?: boolean }>('/inventario/empleados'),
+  /** Crear, modificar y dar de baja depósitos: solo ADMIN. */
+  depositos: crudResource<DepositoResponseDTO, DepositoRequestDTO>('/inventario/depositos'),
+  empleados: crudResource<EmpleadoResponseDTO, EmpleadoRequestDTO, { cargo?: string; estado?: boolean }>('/inventario/empleados'),
   personas: {
     ...readResource<PersonaResponseDTO>('/inventario/personas'),
     porCi: (ci: string) => http.get<PersonaResponseDTO>(`/inventario/personas/ci/${encodeURIComponent(ci)}`),

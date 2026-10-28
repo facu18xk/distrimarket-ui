@@ -94,7 +94,8 @@ export const UsuariosPanel: React.FC = () => {
         subtitle="Los roles definen qué módulos ve y qué puede hacer en cada microservicio."
         maxWidth="md"
       >
-        <UsuarioForm usuario={enEdicion} onClose={() => setFormOpen(false)} onSaved={usuarios.reload} />
+        <UsuarioForm usuario={enEdicion} onClose={() => setFormOpen(false)} onSaved={(u, nuevo) => (nuevo ? usuarios.reload() : usuarios.replaceItem((row) => row.idUsuario === u.idUsuario, u))}
+        />
       </ModalDialog>
     </>
   );
@@ -105,7 +106,8 @@ type Vinculo = 'empleado' | 'persona';
 interface UsuarioFormProps {
   usuario: UsuarioResponseDTO | null;
   onClose: () => void;
-  onSaved: () => void;
+  /** Recibe el usuario guardado: al modificar, la fila se reemplaza sin volver a pedir la página. */
+  onSaved: (usuario: UsuarioResponseDTO, nuevo: boolean) => void;
 }
 
 /** Se monta al abrir el modal: cada apertura empieza con el formulario limpio. */
@@ -142,18 +144,19 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (roles.length === 0 || faltaVinculo) return;
-    const ok = await guardar.run(() =>
-      usuario
+    let guardado: UsuarioResponseDTO | null = null;
+    const ok = await guardar.run(async () => {
+      guardado = await (usuario
         ? authApi.usuarios.update(usuario.idUsuario, { username: username.trim(), roles, password: password || undefined })
         : authApi.usuarios.create({
             username: username.trim(),
             password,
             roles,
             ...(vinculo === 'empleado' ? { idEmpleado: empleado!.id } : { idPersona: persona!.id }),
-          })
-    );
-    if (ok) {
-      onSaved();
+          }));
+    });
+    if (ok && guardado) {
+      onSaved(guardado, !usuario);
       onClose();
     }
   };

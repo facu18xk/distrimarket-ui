@@ -15,7 +15,7 @@ import {
   type Column,
 } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useConfirm, usePagedResource, useRemove } from '../../hooks';
+import { useAsyncAction, useAsyncData, useConfirm, useDepositoAsignado, usePagedResource, useRemove } from '../../hooks';
 import { comprasApi } from '../../services';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
@@ -33,6 +33,7 @@ export const FacturasCompraPanel: React.FC = () => {
   const anular = useAsyncAction();
   const confirm = useConfirm();
   const [formOpen, setFormOpen] = useState(false);
+  const [detalle, setDetalle] = useState<FacturaCompraResponseDTO | null>(null);
 
   const anularFactura = async (f: FacturaCompraResponseDTO) => {
     const aceptado = await confirm({
@@ -68,6 +69,7 @@ export const FacturasCompraPanel: React.FC = () => {
             </Button>
           )}
           <ActionButtons
+            onView={() => setDetalle(f)}
             onDelete={() =>
               baja.remove(
                 { title: 'Dar de baja factura de compra', message: `¿Dar de baja la factura ${formatNumeroFactura(f.numeroFactura)}? Dejará de aparecer en los listados.` },
@@ -91,6 +93,8 @@ export const FacturasCompraPanel: React.FC = () => {
         columns={columns}
         rowKey={(f) => f.idFacturaCompra}
         label="facturas de compra"
+        searchPlaceholder="Buscar por número, timbrado o proveedor..."
+        onRowClick={setDetalle}
         filters={
           <Button variant="emerald" onClick={() => setFormOpen(true)}>
             <Plus />
@@ -108,6 +112,8 @@ export const FacturasCompraPanel: React.FC = () => {
       >
         <FacturaCompraForm onClose={() => setFormOpen(false)} onSaved={facturas.reload} />
       </ModalDialog>
+
+      <DetalleFacturaCompra factura={detalle} onClose={() => setDetalle(null)} />
     </>
   );
 };
@@ -123,7 +129,10 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   const [timbrado, setTimbrado] = useState('');
   const [fechaEmision, setFechaEmision] = useState(todayIso());
   const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
-  const [deposito, setDeposito] = useState<DepositoResponseDTO | null>(null);
+  // El comprador compra siempre para su depósito asignado (el backend también lo impone).
+  const asignado = useDepositoAsignado();
+  const [depositoElegido, setDeposito] = useState<DepositoResponseDTO | null>(null);
+  const deposito = asignado ?? depositoElegido;
   const [idMedioPago, setIdMedioPago] = useState<number | ''>('');
   const [condicion, setCondicion] = useState<CondicionCompra>('CONTADO');
   const [lineas, setLineas] = useState<LineItem[]>([newLineItem()]);
@@ -221,7 +230,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
             </select>
           </FormField>
           <FormField label="Depósito de ingreso" required hint="Aquí se suma el stock.">
-            <DepositoBuscador required depositos={depositos} value={deposito} onChange={setDeposito} />
+            <DepositoBuscador required={!asignado} disabled={Boolean(asignado)} depositos={depositos} value={deposito} onChange={setDeposito} />
           </FormField>
         </div>
 
@@ -241,3 +250,66 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
     </>
   );
 };
+
+/** Detalle de la factura de compra: el listado ya trae cabecera y líneas, así que no se vuelve a pedir. */
+const DetalleFacturaCompra: React.FC<{ factura: FacturaCompraResponseDTO | null; onClose: () => void }> = ({ factura, onClose }) => (
+  <ModalDialog
+    isOpen={factura !== null}
+    onClose={onClose}
+    title={factura ? `Factura de compra ${factura.numeroFactura ? formatNumeroFactura(factura.numeroFactura) : ''}` : ''}
+    subtitle={factura ? `Timbrado ${factura.timbrado} · ${factura.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'}` : undefined}
+    maxWidth="3xl"
+  >
+    {factura && (
+      <div className="space-y-3 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          {(
+            [
+              ['Proveedor', nombreProveedor(factura.proveedor)],
+              ['Fecha', formatDate(factura.fechaEmision)],
+              ['Depósito', factura.deposito?.nombre ?? '—'],
+              ['Medio de pago', factura.medioPago?.nombre ?? '—'],
+            ] as const
+          ).map(([etiqueta, valor]) => (
+            <div key={etiqueta} className="min-w-0">
+              <span className="block text-slate-400">{etiqueta}</span>
+              <strong className="block text-slate-800 truncate">{valor}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="border border-slate-200 rounded-xl">
+          <table className="w-full table-fixed text-left">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+              <tr>
+                <th className="py-2 px-3">Producto</th>
+                <th className="py-2 px-2 w-16 text-center">Cant.</th>
+                <th className="py-2 px-2 w-28 text-right">Costo unit.</th>
+                <th className="hidden sm:table-cell py-2 px-2 w-28 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {factura.detalles.map((d) => (
+                <tr key={d.idDetalle}>
+                  <td className="py-1.5 px-3 font-semibold text-slate-800 truncate">{d.nombreProducto}</td>
+                  <td className="py-1.5 px-2 text-center">{d.cantidad}</td>
+                  <td className="py-1.5 px-2 text-right">{formatMoney(d.precioUnitario)}</td>
+                  <td className="hidden sm:table-cell py-1.5 px-2 text-right font-bold text-slate-900">{formatMoney(d.subtotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex justify-end gap-6">
+          <div className="text-right">
+            <span className="block text-slate-400">IVA incluido</span>
+            <strong className="text-slate-700">{formatMoney(factura.totalIva)}</strong>
+          </div>
+          <div className="text-right">
+            <span className="block text-slate-400">Total</span>
+            <strong className="text-base font-black text-slate-900">{formatMoney(factura.totalGeneral)}</strong>
+          </div>
+        </div>
+      </div>
+    )}
+  </ModalDialog>
+);

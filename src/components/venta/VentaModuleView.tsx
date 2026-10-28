@@ -4,11 +4,13 @@ import type { VentaSubTab } from '../../types';
 import { SubTabs, type SubTab } from '../common';
 import { ClientesPanel } from './ClientesPanel';
 import { FacturasPanel } from './FacturasPanel';
+import { PromocionesPanel } from './PromocionesPanel';
 import { ReportesPanel } from './ReportesPanel';
 
 const TABS: SubTab<VentaSubTab>[] = [
   { id: 'facturas', label: 'Facturas' },
   { id: 'clientes', label: 'Clientes' },
+  { id: 'promociones', label: 'Promociones' },
   { id: 'reportes', label: 'Reportes' },
 ];
 
@@ -22,6 +24,7 @@ export const VentaModuleView: React.FC = () => {
 
       {ventaSubTab === 'facturas' && <FacturasPanel />}
       {ventaSubTab === 'clientes' && <ClientesPanel />}
+      {ventaSubTab === 'promociones' && <PromocionesPanel />}
       {ventaSubTab === 'reportes' && <ReportesPanel />}
     </div>
   );

@@ -13,8 +13,10 @@ export interface PagedResource<T> {
   search: string;
   setSearch: (value: string) => void;
   setPage: (page: number) => void;
-  /** Vuelve a pedir la página actual (después de crear, editar o borrar). */
+  /** Vuelve a pedir la página actual (después de crear o borrar: cambian el orden y el total). */
   reload: () => void;
+  /** Reemplaza una fila con lo que devolvió el backend al modificarla, sin volver a pedir la página. */
+  replaceItem: (isSame: (row: T) => boolean, updated: T) => void;
 }
 
 interface Options<F> {
@@ -76,6 +78,13 @@ export function usePagedResource<T, F = undefined>(
 
   const setPage = useCallback((next: number) => setPageChoice({ scope, page: next }), [scope]);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
+  const replaceItem = useCallback((isSame: (row: T) => boolean, updated: T) => {
+    setSettled((previous) =>
+      previous.result
+        ? { ...previous, result: { ...previous.result, content: previous.result.content.map((row) => (isSame(row) ? updated : row)) } }
+        : previous
+    );
+  }, []);
 
   // Cargando = la consulta vigente todavía no tiene respuesta.
   const current = settled.key === requestKey;
@@ -91,5 +100,6 @@ export function usePagedResource<T, F = undefined>(
     setSearch,
     setPage,
     reload,
+    replaceItem,
   };
 }

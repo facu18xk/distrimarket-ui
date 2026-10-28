@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeftRight, Plus, SlidersHorizontal } from 'lucide-react';
 import {
+  ActionButtons,
   FeedbackBanner,
   FormActions,
   FormField,
@@ -15,14 +16,14 @@ import {
 } from '../common';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useEmpleadoPorDefecto, usePagedResource } from '../../hooks';
+import { useAsyncAction, useAsyncData, useDepositoAsignado, useEmpleadoPorDefecto, usePagedResource } from '../../hooks';
+import { useApp } from '../../context/AppContext';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
 import type { AjusteStockResponseDTO, DepositoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
 
 type Movimiento = 'ajuste' | 'transferencia';
 
-/** "Leche x2, Queso x1" para mostrar el detalle en una celda. */
 const resumen = (detalles: { nombreProducto: string; cantidad: number }[]) =>
   detalles.map((d) => `${d.nombreProducto} ×${d.cantidad}`).join(', ');
 
@@ -47,25 +48,74 @@ const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
   { header: 'Estado', cell: (t) => <StatusBadge status={t.estado === 'COMPLETADO' ? 'Completado' : t.estado} /> },
 ];
 
+/** Columna "Ver": abre el detalle con lo que ya trae la fila (no se vuelve a pedir). */
+function columnaVer<T>(ver: (fila: T) => void): Column<T> {
+  return { header: 'Acciones', align: 'center', cell: (fila) => <ActionButtons onView={() => ver(fila)} /> };
+}
+
+/** Detalle de un ajuste o una transferencia: cabecera y productos, desde la fila del listado. */
+const DetalleMovimiento: React.FC<{
+  movimiento: { detalles: { nombreProducto: string; cantidad: number }[] } | null;
+  titulo: string;
+  datos: [string, React.ReactNode][];
+  onClose: () => void;
+}> = ({ movimiento, titulo, datos, onClose }) => (
+  <ModalDialog isOpen={movimiento !== null} onClose={onClose} title={titulo} maxWidth="lg">
+    {movimiento && (
+      <div className="space-y-3 text-xs">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          {datos.map(([etiqueta, valor]) => (
+            <div key={etiqueta} className="min-w-0">
+              <span className="block text-slate-400">{etiqueta}</span>
+              <strong className="block text-slate-800 truncate">{valor}</strong>
+            </div>
+          ))}
+        </div>
+        <table className="w-full text-left border border-slate-200 rounded-xl overflow-hidden">
+          <thead className="bg-slate-50 text-slate-500 uppercase font-semibold">
+            <tr>
+              <th className="py-2 px-3">Producto</th>
+              <th className="py-2 px-3 w-24 text-right">Cantidad</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {movimiento.detalles.map((d, i) => (
+              <tr key={i}>
+                <td className="py-1.5 px-3 font-semibold text-slate-800">{d.nombreProducto}</td>
+                <td className="py-1.5 px-3 text-right">{d.cantidad}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </ModalDialog>
+);
+
 type FiltroAjustes = { depositoId?: number };
 type FiltroTransferencias = { depositoOrigenId?: number };
 
 /** Filtro por depósito: el mismo buscador de los formularios, sobre el catálogo de depósitos. */
-const FiltroDeposito: React.FC<{ value: DepositoResponseDTO | null; onChange: (deposito: DepositoResponseDTO | null) => void; depositos: DepositoResponseDTO[] | null; titulo: string }> = ({
+const FiltroDeposito: React.FC<{ value: DepositoResponseDTO | null; onChange: (deposito: DepositoResponseDTO | null) => void; depositos: DepositoResponseDTO[] | null; titulo: string; disabled?: boolean }> = ({
   value,
   onChange,
   depositos,
   titulo,
+  disabled,
 }) => (
   <div className="w-full sm:w-64">
-    <DepositoBuscador depositos={depositos ?? []} value={value} onChange={onChange} placeholder={`${titulo}: todos (buscar...)`} />
+    <DepositoBuscador depositos={depositos ?? []} value={value} onChange={onChange} disabled={disabled} placeholder={`${titulo}: todos (buscar...)`} />
   </div>
 );
 
 /** Ajustes: entradas y salidas de un depósito que no son compras ni ventas (merma, conteo, vencimiento). */
 export const AjustesPanel: React.FC = () => {
+  const asignado = useDepositoAsignado();
   const depositos = useAsyncData(catalogos.depositos);
-  const [filtro, setFiltro] = useState<DepositoResponseDTO | null>(null);
+  const [filtroElegido, setFiltro] = useState<DepositoResponseDTO | null>(null);
+  // El depositero ve solo los ajustes de su depósito.
+  const filtro = asignado ?? filtroElegido;
+  const [detalle, setDetalle] = useState<AjusteStockResponseDTO | null>(null);
   const ajustes = usePagedResource<AjusteStockResponseDTO, FiltroAjustes>(inventarioApi.ajustes.list, {
     filters: filtro ? { depositoId: filtro.id } : undefined,
     sort: 'fechaCreacion,desc',
@@ -76,12 +126,14 @@ export const AjustesPanel: React.FC = () => {
     <>
       <PagedTable
         resource={ajustes}
-        columns={columnasAjustes}
+        columns={[...columnasAjustes, columnaVer(setDetalle)]}
         rowKey={(a) => a.id}
         label="ajustes"
+        searchPlaceholder="Buscar por motivo, depósito o responsable..."
+        onRowClick={setDetalle}
         filters={
           <>
-            <FiltroDeposito value={filtro} onChange={setFiltro} depositos={depositos.data} titulo="Depósito" />
+            <FiltroDeposito value={filtro} onChange={setFiltro} depositos={depositos.data} titulo="Depósito" disabled={Boolean(asignado)} />
             <Button variant="emerald" onClick={() => setFormOpen(true)}>
               <Plus />
               <span>Nuevo ajuste</span>
@@ -90,12 +142,21 @@ export const AjustesPanel: React.FC = () => {
         }
       />
       <MovimientoFormModal tipo="ajuste" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={ajustes.reload} />
+      <DetalleMovimiento
+        movimiento={detalle}
+        titulo={detalle ? `Ajuste N.º ${detalle.id}` : ''}
+        datos={detalle ? [['Depósito', detalle.nombreDeposito], ['Tipo', detalle.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'], ['Motivo', detalle.motivo], ['Responsable', detalle.nombreEmpleado]] : []}
+        onClose={() => setDetalle(null)}
+      />
     </>
   );
 };
 
 /** Transferencias: mueven stock de un depósito a otro. */
 export const TransferenciasPanel: React.FC = () => {
+  // Transferir entre depósitos es solo de ADMIN; el depositero las consulta.
+  const { isAdmin } = useApp();
+  const [detalle, setDetalle] = useState<TransferenciaStockResponseDTO | null>(null);
   const depositos = useAsyncData(catalogos.depositos);
   const [origen, setOrigen] = useState<DepositoResponseDTO | null>(null);
   const transferencias = usePagedResource<TransferenciaStockResponseDTO, FiltroTransferencias>(inventarioApi.transferencias.list, {
@@ -108,20 +169,30 @@ export const TransferenciasPanel: React.FC = () => {
     <>
       <PagedTable
         resource={transferencias}
-        columns={columnasTransferencias}
+        columns={[...columnasTransferencias, columnaVer(setDetalle)]}
         rowKey={(t) => t.id}
         label="transferencias"
+        searchPlaceholder="Buscar por depósito, observación o responsable..."
+        onRowClick={setDetalle}
         filters={
           <>
             <FiltroDeposito value={origen} onChange={setOrigen} depositos={depositos.data} titulo="Origen" />
-            <Button variant="emerald" onClick={() => setFormOpen(true)}>
-              <Plus />
-              <span>Nueva transferencia</span>
-            </Button>
+            {isAdmin && (
+              <Button variant="emerald" onClick={() => setFormOpen(true)}>
+                <Plus />
+                <span>Nueva transferencia</span>
+              </Button>
+            )}
           </>
         }
       />
       <MovimientoFormModal tipo="transferencia" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={transferencias.reload} />
+      <DetalleMovimiento
+        movimiento={detalle}
+        titulo={detalle ? `Transferencia N.º ${detalle.id}` : ''}
+        datos={detalle ? [['Origen', detalle.nombreDepositoOrigen], ['Destino', detalle.nombreDepositoDestino], ['Observación', detalle.observacion ?? '—'], ['Responsable', detalle.nombreEmpleado]] : []}
+        onClose={() => setDetalle(null)}
+      />
     </>
   );
 };
@@ -159,7 +230,10 @@ const MovimientoFormModal: React.FC<MovimientoFormProps & { isOpen: boolean }> =
 const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved }) => {
   const depositos = useAsyncData(depositosActivos);
   const guardar = useAsyncAction();
-  const [deposito, setDeposito] = useState<DepositoResponseDTO | null>(null);
+  // El depositero ajusta siempre su depósito asignado (el backend también lo impone).
+  const asignado = useDepositoAsignado();
+  const [depositoElegido, setDeposito] = useState<DepositoResponseDTO | null>(null);
+  const deposito = tipo === 'ajuste' && asignado ? asignado : depositoElegido;
   const [destino, setDestino] = useState<DepositoResponseDTO | null>(null);
   const [empleado, setEmpleado] = useEmpleadoPorDefecto();
   const [tipoAjuste, setTipoAjuste] = useState<TipoAjuste>('NEGATIVO');
@@ -180,12 +254,12 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
       tipo === 'ajuste'
         ? inventarioApi.ajustes.create({ idDeposito: deposito.id, idEmpleado: empleado.id, motivo: texto.trim(), tipoAjuste, detalles })
         : inventarioApi.transferencias.create({
-            idDepositoOrigen: deposito.id,
-            idDepositoDestino: destino!.id,
-            idEmpleado: empleado.id,
-            observacion: texto.trim() || undefined,
-            detalles,
-          })
+          idDepositoOrigen: deposito.id,
+          idDepositoDestino: destino!.id,
+          idEmpleado: empleado.id,
+          observacion: texto.trim() || undefined,
+          detalles,
+        })
     );
     if (ok) {
       onSaved();
@@ -197,7 +271,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <FormField label={tipo === 'ajuste' ? 'Depósito' : 'Depósito de origen'} required>
-          <DepositoBuscador required depositos={lista} value={deposito} onChange={setDeposito} />
+          <DepositoBuscador required={!asignado} disabled={tipo === 'ajuste' && Boolean(asignado)} depositos={lista} value={deposito} onChange={setDeposito} />
         </FormField>
 
         {tipo === 'ajuste' ? (

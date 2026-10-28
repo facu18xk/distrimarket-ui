@@ -89,6 +89,8 @@ function toProfile(current: Session, profile: UsuarioResponseDTO | null, avatarU
     documento: profile?.documento,
     idEmpleado: profile?.idEmpleado ?? current.idEmpleado,
     cargo: profile?.cargo,
+    idDeposito: profile?.idDeposito ?? current.idDeposito,
+    nombreDeposito: profile?.nombreDeposito,
     avatarUrl,
   };
 }

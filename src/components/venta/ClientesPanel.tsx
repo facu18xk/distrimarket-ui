@@ -60,7 +60,9 @@ export const ClientesPanel: React.FC = () => {
         }
       />
 
-      <ClienteFormModal isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={() => clientes.reload()} cliente={enEdicion} />
+      <ClienteFormModal isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={(c) => (enEdicion ? clientes.replaceItem((row) => row.idCliente === c.idCliente, c) : clientes.reload())}
+        cliente={enEdicion}
+      />
     </>
   );
 };

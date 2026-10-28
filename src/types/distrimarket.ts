@@ -1,7 +1,7 @@
 import type { Role } from '../auth/roles';
 
-export type VentaSubTab = 'facturas' | 'clientes' | 'reportes';
-export type AdminSubTab = 'usuarios' | 'timbrados' | 'mediosPago';
+export type VentaSubTab = 'facturas' | 'clientes' | 'promociones' | 'reportes';
+export type AdminSubTab = 'usuarios' | 'empleados' | 'timbrados' | 'mediosPago' | 'soporte';
 
 export type MainModule = 'venta' | 'stock' | 'compra' | 'administracion';
 
@@ -19,6 +19,9 @@ export interface UserProfile {
   /** Presentes si la persona del usuario es empleado (por ejemplo, el vendedor). */
   idEmpleado?: number;
   cargo?: string;
+  /** Depósito asignado: vendedor, comprador y depositero operan siempre sobre él (no lo eligen). */
+  idDeposito?: number;
+  nombreDeposito?: string;
   /** Preferencia visual guardada en el navegador. */
   avatarUrl: string;
 }

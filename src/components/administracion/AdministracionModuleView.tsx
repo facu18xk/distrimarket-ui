@@ -4,11 +4,15 @@ import type { AdminSubTab } from '../../types';
 import { FeedbackBanner, SubTabs, type SubTab } from '../common';
 import { MediosPagoPanel, TimbradosPanel } from './CatalogosPanel';
 import { UsuariosPanel } from './UsuariosPanel';
+import { EmpleadosPanel } from './EmpleadosPanel';
+import { SoportePanel } from './SoportePanel';
 
 const TABS: SubTab<AdminSubTab>[] = [
   { id: 'usuarios', label: 'Usuarios' },
+  { id: 'empleados', label: 'Empleados' },
   { id: 'timbrados', label: 'Timbrados' },
   { id: 'mediosPago', label: 'Medios de pago' },
+  { id: 'soporte', label: 'Soporte' },
 ];
 
 /**
@@ -34,8 +38,10 @@ export const AdministracionModuleView: React.FC = () => {
       <SubTabs tabs={TABS} value={adminSubTab} onChange={setAdminSubTab} />
 
       {adminSubTab === 'usuarios' && <UsuariosPanel />}
+      {adminSubTab === 'empleados' && <EmpleadosPanel />}
       {adminSubTab === 'timbrados' && <TimbradosPanel />}
       {adminSubTab === 'mediosPago' && <MediosPagoPanel />}
+      {adminSubTab === 'soporte' && <SoportePanel />}
     </div>
   );
 };

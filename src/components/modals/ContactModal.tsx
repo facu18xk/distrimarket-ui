@@ -3,9 +3,11 @@ import { Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ModalDialog } from '../common/ModalDialog';
 import { useApp } from '../../context/AppContext';
 import { SOPORTE_EMAIL } from '../../lib/contacto';
+import { errorMessage, ventasApi } from '../../services';
 
 export const ContactModal: React.FC = () => {
-  const { contactModalOpen, setContactModalOpen, user, sendContactMessage, theme } = useApp();
+  const { contactModalOpen, setContactModalOpen, user, theme } = useApp();
+  const [enviando, setEnviando] = useState(false);
   const [nombre, setNombre] = useState(user.name || '');
   const [email, setEmail] = useState('');
   const [asunto, setAsunto] = useState('');
@@ -13,16 +15,25 @@ export const ContactModal: React.FC = () => {
   const [isSent, setIsSent] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // El mensaje va a ventas (endpoint público, sirve también desde el login); un job lo reenvía por correo.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim() || !email.trim() || !asunto.trim() || !mensaje.trim()) {
       setError('Por favor completa todos los campos requeridos.');
       return;
     }
 
-    sendContactMessage(nombre, email, asunto, mensaje);
-    setIsSent(true);
+    setEnviando(true);
     setError('');
+    try {
+      await ventasApi.soporte.contacto({ nombre: nombre.trim(), correo: email.trim(), asunto: asunto.trim(), mensaje: mensaje.trim() });
+    } catch (err) {
+      setError(errorMessage(err));
+      return;
+    } finally {
+      setEnviando(false);
+    }
+    setIsSent(true);
 
     // Reset after 3 seconds or allow manual close
     setTimeout(() => {
@@ -134,6 +145,7 @@ export const ContactModal: React.FC = () => {
             </button>
             <button
               type="submit"
+              disabled={enviando}
               style={{ backgroundColor: theme.primaryHex }}
               className="sobre-primario px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md hover:opacity-90 transition-opacity flex items-center space-x-2"
             >
