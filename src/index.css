@@ -167,3 +167,12 @@ html.oscuro .hover\:bg-white\/60:hover {
 html.oscuro .ring-offset-2 {
   --tw-ring-offset-color: var(--superficie);
 }
+/*
+ * Botones y etiquetas "oscuros" (bg-slate-900/800 con texto blanco): en modo oscuro su fondo pasa a
+ * ser claro, así que el texto va oscuro para que se lea (por ejemplo, "Exportar a PDF").
+ */
+html.oscuro .bg-slate-900.text-white,
+html.oscuro .bg-slate-800.text-white,
+html.oscuro .hover\:bg-slate-800.text-white:hover {
+  color: var(--color-slate-100);
+}
