@@ -5,6 +5,8 @@ import {
     User,
     Settings,
     ChevronDown,
+    Sun,
+    Moon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MODULE_LABELS, homeModule, modulesFor } from '../../auth/roles';
@@ -24,6 +26,7 @@ export const HeaderNavbar: React.FC = () => {
         adminSubTab,
         logout,
         setAccountModalOpen,
+        toggleDarkMode,
     } = useApp();
 
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -210,6 +213,24 @@ export const HeaderNavbar: React.FC = () => {
                         );
                     })}
                 </nav>
+
+                {/* Acceso directo al modo claro/oscuro (también está en Personalización). */}
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(theme.isDark)}
+                    onClick={toggleDarkMode}
+                    title={theme.isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                    className="relative shrink-0 -mr-1 w-12 h-7 rounded-full border border-slate-200/80 bg-slate-100 hover:border-slate-300 transition-colors focus:outline-hidden focus:ring-2 focus:ring-slate-300 cursor-pointer"
+                >
+                    <span
+                        className={`absolute top-0.5 left-0.5 w-[22px] h-[22px] rounded-full bg-white shadow-sm flex items-center justify-center transition-transform duration-200 ${
+                            theme.isDark ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                    >
+                        {theme.isDark ? <Moon className="w-3.5 h-3.5 text-slate-700" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+                    </span>
+                </button>
 
                 {/* Right: User Profile */}
                 <div className="relative shrink-0" ref={dropdownRef}>

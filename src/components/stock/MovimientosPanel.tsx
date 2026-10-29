@@ -305,7 +305,13 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
 
       {mismoDeposito && <FeedbackBanner>El depósito de origen y el de destino no pueden ser el mismo.</FeedbackBanner>}
 
-      <LineItemsEditor lines={lineas} onChange={setLineas} price="sin" />
+      <LineItemsEditor
+        lines={lineas}
+        onChange={setLineas}
+        price="sin"
+        // Lo que sale del depósito (transferencia o ajuste de salida) se controla contra su stock.
+        deposito={{ idDeposito: deposito?.id ?? null, verificarStock: tipo === 'transferencia' || tipoAjuste === 'NEGATIVO' }}
+      />
 
       {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}
 

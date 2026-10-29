@@ -212,6 +212,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.style.setProperty('--user-hover-color', theme.hoverHex);
     // Texto sobre el color principal: negro si el color es muy claro (ver .sobre-primario en index.css).
     document.documentElement.style.setProperty('--user-on-primary-color', textoSobre(theme.primaryHex));
+    // Modo claro por defecto; el oscuro se elige en Personalización (ver html.oscuro en index.css).
+    document.documentElement.classList.toggle('oscuro', Boolean(theme.isDark));
   }, [theme]);
 
   const setThemeColor = (colorId: string) => {

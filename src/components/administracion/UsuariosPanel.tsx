@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useAsyncAction, usePagedResource, useRemove } from '../../hooks';
 import { MODULE_LABELS, ROLES, ROLE_LIST, modulesFor } from '../../auth/roles';
 import { authApi, errorMessage, inventarioApi } from '../../services';
-import { normalizeCi } from '../../lib/paraguay';
+import { formatCi, formatDocumentoTexto, normalizeCi } from '../../lib/paraguay';
 import type { EmpleadoResponseDTO, PersonaResponseDTO, RolUsuario, UsuarioResponseDTO } from '../../types/api';
 import { ActionButtons, EmpleadoPicker, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, fieldClass, type Column } from '../common';
 import { Badge } from '../ui/badge';
@@ -29,7 +29,7 @@ export const UsuariosPanel: React.FC = () => {
   const columns: Column<UsuarioResponseDTO>[] = [
     { header: 'Usuario', cell: (u) => u.username, className: 'font-bold text-slate-900' },
     { header: 'Nombre', cell: (u) => u.nombreCompleto ?? '—' },
-    { header: 'Documento', cell: (u) => u.documento ?? '—', className: 'text-slate-600' },
+    { header: 'Documento', cell: (u) => formatDocumentoTexto(u.documento), className: 'text-slate-600' },
     { header: 'Cargo', cell: (u) => u.cargo ?? 'No es empleado', className: 'text-slate-600 text-xs' },
     {
       header: 'Roles',
@@ -218,7 +218,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
       {usuario ? (
         <p className="text-xs text-slate-500">
           Pertenece a <strong>{usuario.nombreCompleto ?? 'una persona'}</strong>
-          {usuario.documento ? ` (${usuario.documento})` : ''}; la persona asociada no se cambia.
+          {usuario.documento ? ` (${formatDocumentoTexto(usuario.documento)})` : ''}; la persona asociada no se cambia.
         </p>
       ) : (
         <FormField label="¿A quién pertenece?" required>
@@ -244,9 +244,9 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
               <div className="flex gap-2">
                 <input
                   className={fieldClass}
-                  value={ci}
+                  value={formatCi(ci)}
                   onChange={(e) => {
-                    setCi(e.target.value);
+                    setCi(normalizeCi(e.target.value));
                     setPersona(null);
                   }}
                   placeholder="CI de la persona"
@@ -259,7 +259,7 @@ const UsuarioForm: React.FC<UsuarioFormProps> = ({ usuario, onClose, onSaved }) 
               </div>
               {persona && (
                 <FeedbackBanner variant="success">
-                  {persona.nombreCompleto} (CI {persona.ci})
+                  {persona.nombreCompleto} (CI {formatCi(persona.ci)})
                 </FeedbackBanner>
               )}
               {errorPersona && <FeedbackBanner>{errorPersona}</FeedbackBanner>}

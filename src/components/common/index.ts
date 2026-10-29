@@ -3,6 +3,7 @@ export * from './ConfirmDialog';
 export * from './DataTable';
 export * from './Footer';
 export * from './FormControls';
+export * from './CampoNumero';
 export * from './HeaderNavbar';
 export * from './LineItemsEditor';
 export * from './ModalDialog';

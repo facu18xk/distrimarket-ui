@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { PackagePlus, Plus, Save, Trash2 } from 'lucide-react';
 import {
+  CampoNumero,
   ActionButtons,
   DepositoBuscador,
   FeedbackBanner,
@@ -302,10 +303,10 @@ const ProductoForm: React.FC<ProductoFormProps> = ({ producto, clasificaciones, 
 
       <div className="grid grid-cols-3 gap-3">
         <FormField label="Costo (Gs.)" required>
-          <input className={fieldClass} type="number" min={0} required value={form.precioCosto} onChange={(e) => set({ precioCosto: e.target.value })} />
+          <CampoNumero prefijo="Gs." min={0} required value={form.precioCosto === '' ? null : Number(form.precioCosto)} onChange={(v) => set({ precioCosto: v === null ? '' : String(v) })} />
         </FormField>
         <FormField label="Venta (Gs.)" required>
-          <input className={fieldClass} type="number" min={0} required value={form.precioVenta} onChange={(e) => set({ precioVenta: e.target.value })} />
+          <CampoNumero prefijo="Gs." min={0} required value={form.precioVenta === '' ? null : Number(form.precioVenta)} onChange={(v) => set({ precioVenta: v === null ? '' : String(v) })} />
         </FormField>
         <FormField label="IVA" required>
           <select className={fieldClass} value={form.porcentajeIva} onChange={(e) => set({ porcentajeIva: e.target.value })}>

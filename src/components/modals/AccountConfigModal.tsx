@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Palette, User, Image, Check, ShieldCheck } from 'lucide-react';
+import { Palette, User, Image, Check, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { ModalDialog } from '../common/ModalDialog';
 import { ColorWheel } from '../common/ColorWheel';
 import { Badge } from '../ui/badge';
@@ -12,7 +12,7 @@ import { THEME_PALETTES, AVATAR_OPTIONS } from '../../lib/theme';
  * seguridad y solo los cambia un administrador; el color y la foto son preferencias de este navegador.
  */
 export const AccountConfigModal: React.FC = () => {
-  const { accountModalOpen, setAccountModalOpen, user, updateAvatar, theme, setThemeColor, setThemeHex } = useApp();
+  const { accountModalOpen, setAccountModalOpen, user, updateAvatar, theme, setThemeColor, setThemeHex, toggleDarkMode } = useApp();
   const [customUrlInput, setCustomUrlInput] = useState('');
   // Cambia solo al tocar un color rápido: la rueda se vuelve a armar con ese color.
   const [versionRueda, setVersionRueda] = useState(0);
@@ -121,6 +121,30 @@ export const AccountConfigModal: React.FC = () => {
         {/* Derecha: color de la interfaz */}
         <section>
           {titulo(<Palette className="w-3.5 h-3.5 text-slate-500" />, 'Color de la interfaz')}
+          {/* Modo claro (por defecto) u oscuro: se guarda con el color, en este navegador. */}
+          <div className="flex items-center gap-2 mb-2.5">
+            {([
+              { oscuro: false, Icono: Sun, texto: 'Modo claro' },
+              { oscuro: true, Icono: Moon, texto: 'Modo oscuro' },
+            ] as const).map(({ oscuro, Icono, texto }) => {
+              const elegido = Boolean(theme.isDark) === oscuro;
+              return (
+                <button
+                  type="button"
+                  key={texto}
+                  onClick={() => !elegido && toggleDarkMode()}
+                  title={texto}
+                  aria-pressed={elegido}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center border border-slate-200 bg-slate-50 text-slate-600 shadow-xs transition-transform hover:scale-110 ${
+                    elegido ? 'ring-2 ring-offset-2 ring-slate-800' : ''
+                  }`}
+                >
+                  <Icono className="w-3.5 h-3.5" />
+                </button>
+              );
+            })}
+            <span className="text-[11px] text-slate-500">{theme.isDark ? 'Modo oscuro' : 'Modo claro'}</span>
+          </div>
           {/* Colores rápidos; la rueda permite cualquier otro. */}
           <div className="flex flex-wrap items-center gap-2 mb-2.5">
             {THEME_PALETTES.map((palette) => {

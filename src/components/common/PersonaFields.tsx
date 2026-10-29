@@ -1,5 +1,5 @@
 import { FormField, fieldClass } from './FormControls';
-import { completeRuc, formatCi, formatPhone, maskRuc, normalizeCi } from '../../lib/paraguay';
+import { completeRuc, formatCi, formatPhone, formatRuc, maskRuc, normalizeCi } from '../../lib/paraguay';
 import type { PersonaErrors, PersonaForm } from '../../lib/persona';
 import type { TipoPersona } from '../../types/api';
 
@@ -68,11 +68,11 @@ export function PersonaFields({ value, onChange, errors, showAllErrors }: Person
           <input
             className={fieldClass}
             required={!esFisica}
-            value={value.ruc}
+            value={formatRuc(value.ruc)}
             onChange={(e) => set({ ruc: maskRuc(e.target.value) })}
             // Al salir con solo la base escrita, se completa el dígito verificador.
             onBlur={() => /^\d{5,8}$/.test(value.ruc) && set({ ruc: completeRuc(value.ruc) })}
-            placeholder="80012345-0"
+            placeholder="80.012.345-0"
           />
           {error('ruc')}
         </FormField>

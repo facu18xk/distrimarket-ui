@@ -251,6 +251,8 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
           onChange={setLineas}
           price="manual"
           onCrearProducto={(key) => setAltaProductoParaLinea(key)}
+          // La compra entra a un depósito: se elige antes de cargar productos (no se controla stock).
+          deposito={{ idDeposito: deposito?.id ?? null, verificarStock: false }}
         />
 
         {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}

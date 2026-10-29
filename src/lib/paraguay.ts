@@ -64,10 +64,27 @@ export function rucError(value: string): string | null {
   return Number(match[2]) === esperado ? null : `El dígito verificador no coincide: para ${match[1]} corresponde ${esperado}.`;
 }
 
+/**
+ * RUC para mostrar (y en el campo mientras se escribe): puntos de miles en la base, sin tocar
+ * el guion ni el verificador: "80012345-6" -> "80.012.345-6". Se guarda sin puntos (ver maskRuc).
+ */
+export function formatRuc(value: string | null | undefined): string {
+  if (!value) return '';
+  const [base, ...resto] = value.split('-');
+  if (!/^\d*$/.test(base)) return value;
+  return resto.length ? `${miles(base)}-${resto.join('')}` : miles(base);
+}
+
 /** CI o RUC para mostrar en una tabla. */
 export function formatDocumento(ci?: string | null, ruc?: string | null): string {
-  if (ruc) return ruc;
+  if (ruc) return formatRuc(ruc);
   return formatCi(ci) || '—';
+}
+
+/** Un documento suelto (CI o RUC, por ejemplo el de una factura): con puntos de miles. */
+export function formatDocumentoTexto(documento: string | null | undefined): string {
+  if (!documento) return '—';
+  return documento.includes('-') ? formatRuc(documento) : formatCi(documento) || documento;
 }
 
 // ---------------------------------------------------------------- Teléfono

@@ -32,6 +32,14 @@ async function cargarCatalogos() {
 
 const idONada = (value: string): number | '' => (value === '' ? '' : Number(value));
 
+/** Unidades por producto que la factura ya descontó: al modificarla, vuelven a estar disponibles para ella. */
+function reservadoDeFactura(factura: FacturaVentaResponseDTO): Record<number, number> {
+  const reservado: Record<number, number> = {};
+  if (factura.estado?.toUpperCase() !== 'EMITIDA') return reservado;
+  for (const d of factura.detalles ?? []) reservado[d.idProducto] = (reservado[d.idProducto] ?? 0) + d.cantidad;
+  return reservado;
+}
+
 /** La factura trae el cliente plano (id, nombre y documento): alcanza para mostrarlo en el selector. */
 function clienteDeFactura(factura: FacturaVentaResponseDTO): ClienteResponseDTO {
   const documento = factura.clienteDocumento ?? '';
@@ -59,7 +67,7 @@ export const FacturaFormModal: React.FC<FacturaFormModalProps> = ({ isOpen, onCl
     isOpen={isOpen}
     onClose={onClose}
     title={idFactura ? 'Modificar factura' : 'Emitir factura de venta'}
-    subtitle="El precio, el IVA y el stock se toman de inventario al guardar."
+    subtitle="El stock se verifica al cargar cada producto; el precio y el IVA se toman de inventario al guardar."
     maxWidth="6xl"
     className="h-[88vh] max-h-[92vh]"
   >
@@ -237,7 +245,12 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
           </div>
 
           {/* ---- Detalle ---- */}
-          <LineItemsEditor lines={lineas} onChange={setLineas} price="catalogo" />
+          <LineItemsEditor
+            lines={lineas}
+            onChange={setLineas}
+            price="catalogo"
+            deposito={{ idDeposito: deposito?.id ?? null, verificarStock: true, reservado: factura && deposito?.id === factura.idDeposito ? reservadoDeFactura(factura) : undefined }}
+          />
 
           {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}
 

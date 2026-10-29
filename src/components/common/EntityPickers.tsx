@@ -4,7 +4,7 @@ import { RemotePicker } from './RemotePicker';
 import { comprasApi, inventarioApi, ventasApi } from '../../services';
 import type { PageQuery } from '../../services/pagination';
 import { formatMoney } from '../../lib/format';
-import { formatDocumento } from '../../lib/paraguay';
+import { formatDocumento, formatRuc } from '../../lib/paraguay';
 import { nombreProveedor } from '../../lib/proveedor';
 import type { ClienteResponseDTO, EmpleadoResponseDTO, ProductoResponseDTO, ProveedorResponseDTO } from '../../types/api';
 
@@ -86,7 +86,7 @@ export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO>> = (props) =>
     buscarPagina={paginaDeProveedores}
     clave={(p) => p.idProveedor}
     etiqueta={(p) => nombreProveedor(p)}
-    detalle={(p) => p.persona.ruc ?? ''}
+    detalle={(p) => formatRuc(p.persona.ruc)}
     deshabilitado={(p) => !p.estado}
     placeholder={props.placeholder ?? 'Seleccionar proveedor...'}
   />

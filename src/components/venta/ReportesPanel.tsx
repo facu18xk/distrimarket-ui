@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { FileDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileDown } from 'lucide-react';
 import { ClienteSelector, DataTable, EmpleadoPicker, FeedbackBanner, FormField, fieldClass, type Column } from '../common';
 import { Button } from '../ui/button';
 import { useApp } from '../../context/AppContext';
@@ -131,12 +131,59 @@ const columnas = (nombre: string, mostrarNombre: (g: Grupo) => string = (g) => g
   { header: 'Total', align: 'center', cell: (g) => formatMoney(g.total), className: 'font-black text-slate-900' },
 ];
 
-const Seccion: React.FC<{ titulo: string; filas: Grupo[]; columns: Column<Grupo>[] }> = ({ titulo, filas, columns }) => (
-  <div className="break-inside-avoid">
-    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">{titulo}</h4>
-    <DataTable columns={columns} rows={filas} rowKey={(g) => g.nombre} emptyMessage="Sin ventas con estos filtros." />
-  </div>
-);
+/** Filas que muestra cada sección al principio, y cuántas suma "Ver más". */
+const INICIALES = 5;
+const PASO = 10;
+
+/**
+ * Una sección del reporte: se puede plegar (clic en el título) y muestra primero las 5 mejores
+ * filas; "Ver más" suma de a 10 y "Ver menos" vuelve a las 5. El PDF sale como se ve en pantalla.
+ */
+const Seccion: React.FC<{ titulo: string; filas: Grupo[]; columns: Column<Grupo>[] }> = ({ titulo, filas, columns }) => {
+  const [abierta, setAbierta] = useState(true);
+  const [limite, setLimite] = useState(INICIALES);
+  const visibles = filas.slice(0, limite);
+  const restantes = filas.length - visibles.length;
+  const boton = 'inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-900 print:hidden';
+
+  return (
+    <div className={cn('break-inside-avoid', !abierta && 'print:hidden')}>
+      <button
+        type="button"
+        onClick={() => setAbierta((a) => !a)}
+        aria-expanded={abierta}
+        className="w-full flex items-center justify-between mb-1.5 text-left group"
+        title={abierta ? 'Plegar' : 'Desplegar'}
+      >
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+          {titulo} <span className="font-semibold text-slate-400 normal-case">({filas.length})</span>
+        </h4>
+        <ChevronDown className={cn('w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-transform print:hidden', abierta && 'rotate-180')} />
+      </button>
+      {abierta && (
+        <>
+          <DataTable columns={columns} rows={visibles} rowKey={(g) => g.nombre} emptyMessage="Sin ventas con estos filtros." />
+          {(restantes > 0 || limite > INICIALES) && (
+            <div className="flex items-center justify-center gap-4 mt-1.5">
+              {restantes > 0 && (
+                <button type="button" className={boton} onClick={() => setLimite((l) => l + PASO)}>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  Ver más ({restantes} {restantes === 1 ? 'restante' : 'restantes'})
+                </button>
+              )}
+              {limite > INICIALES && (
+                <button type="button" className={boton} onClick={() => setLimite(INICIALES)}>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                  Ver menos
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
 
 const idONada = (value: string): number | '' => (value === '' ? '' : Number(value));
 
@@ -157,7 +204,6 @@ export const ReportesPanel: React.FC = () => {
   // Cliente y vendedor elegidos (para mostrarlos en el selector y en el encabezado del PDF).
   const [cliente, setCliente] = useState<ClienteResponseDTO | null>(null);
   const [vendedor, setVendedor] = useState<EmpleadoResponseDTO | null>(null);
-  const [top, setTop] = useState(10);
   const set = (cambios: Partial<Filtros>) => setFiltros((actual) => ({ ...actual, ...cambios }));
   const rangoValido = filtros.fechaDesde <= filtros.fechaHasta;
 
@@ -263,17 +309,7 @@ export const ReportesPanel: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="break-inside-avoid">
-              <div className="flex items-center justify-between mb-1.5">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Mejores clientes</h4>
-                <select className={cn(filtro, 'w-auto py-1 text-xs print:hidden')} value={top} onChange={(e) => setTop(Number(e.target.value))}>
-                  <option value={5}>Top 5</option>
-                  <option value={10}>Top 10</option>
-                  <option value={20}>Top 20</option>
-                </select>
-              </div>
-              <DataTable columns={columnas('Cliente')} rows={datos.porCliente.slice(0, top)} rowKey={(g) => g.nombre} emptyMessage="Sin ventas con estos filtros." />
-            </div>
+            <Seccion titulo="Mejores clientes" filas={datos.porCliente} columns={columnas('Cliente')} />
             <Seccion titulo="Ventas por vendedor" filas={datos.porVendedor} columns={columnas('Vendedor')} />
             <Seccion titulo="Ventas por medio de pago" filas={datos.porMedioPago} columns={columnas('Medio de pago')} />
             <Seccion titulo="Ventas por día" filas={datos.porDia} columns={columnas('Fecha', (g) => formatDate(g.nombre))} />

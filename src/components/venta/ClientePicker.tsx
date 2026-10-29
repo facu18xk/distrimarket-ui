@@ -3,7 +3,7 @@ import { Loader2, Search, UserPlus, X } from 'lucide-react';
 import { fieldClass } from '../common';
 import { useDebounce } from '../../hooks';
 import { ventasApi } from '../../services';
-import { formatDocumento, formatPhone } from '../../lib/paraguay';
+import { formatDocumento, formatPhone, formatRuc } from '../../lib/paraguay';
 import { cn } from '../../lib/utils';
 import type { ClienteResponseDTO } from '../../types/api';
 
@@ -103,7 +103,7 @@ export const ClientePicker: React.FC<ClientePickerProps> = ({ value, onChange, o
         <div className="min-w-0">
           <span className="block font-bold text-slate-900 truncate">{p.nombreCompleto}</span>
           <span className="block text-[11px] text-slate-500 truncate">
-            {p.ruc ? `RUC ${p.ruc}` : `CI ${formatDocumento(p.ci)}`}
+            {p.ruc ? `RUC ${formatRuc(p.ruc)}` : `CI ${formatDocumento(p.ci)}`}
             {p.telefono ? ` · ${formatPhone(p.telefono)}` : ''}
           </span>
         </div>
