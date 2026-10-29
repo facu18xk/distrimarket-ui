@@ -3,7 +3,7 @@ import {
     ShoppingCart,
     LogOut,
     User,
-    Palette,
+    Settings,
     ChevronDown,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -252,7 +252,7 @@ export const HeaderNavbar: React.FC = () => {
                                     />
                                     <div className="truncate">
                                         <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
-                                        <p className="text-[11px] text-slate-500 truncate">@{user.username}{user.cargo ? ` · ${user.cargo}` : ''}</p>
+                                        <p className="text-[11px] text-slate-500 truncate">{user.username}{user.cargo ? ` · ${user.cargo}` : ''}</p>
                                         <span className="inline-block mt-0.5 px-2 py-0.2 bg-slate-200/60 text-slate-700 text-[10px] font-semibold rounded-full">
                                             {user.role}
                                         </span>
@@ -260,22 +260,20 @@ export const HeaderNavbar: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Action 1: Configuración de Cuenta */}
+                            {/* Divider */}
+                            <div className="h-px bg-slate-100 my-1" />
+
+                            {/* Action 1: Configuración */}
                             <button
                                 type="button"
                                 onClick={() => {
                                     setDropdownOpen(false);
                                     setAccountModalOpen(true);
                                 }}
-                                className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-100/80 rounded-xl transition-colors text-left cursor-pointer"
+                                className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100/80 hover:text-slate-900 rounded-xl transition-colors text-left cursor-pointer"
                             >
-                                <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                                    <Palette className="w-3.5 h-3.5" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-slate-900 text-xs">Personalizar UI y Cuenta</p>
-                                    <p className="text-[10px] text-slate-400">Color de tema, foto y datos</p>
-                                </div>
+                                <Settings className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span>Configuración</span>
                             </button>
 
                             {/* Action 2: Cerrar Sesión */}
@@ -285,15 +283,10 @@ export const HeaderNavbar: React.FC = () => {
                                     setDropdownOpen(false);
                                     logout();
                                 }}
-                                className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs text-rose-600 hover:bg-rose-50/80 rounded-xl transition-colors text-left mt-0.5 cursor-pointer"
+                                className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50/80 rounded-xl transition-colors text-left cursor-pointer"
                             >
-                                <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                                    <LogOut className="w-3.5 h-3.5" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-xs">Cerrar sesión</p>
-                                    <p className="text-[10px] text-rose-400">Volver a pantalla de inicio</p>
-                                </div>
+                                <LogOut className="w-4 h-4 text-rose-500 shrink-0" />
+                                <span>Cerrar sesión</span>
                             </button>
                         </div>
                     )}

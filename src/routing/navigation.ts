@@ -14,7 +14,6 @@ import {
   Stamp,
   CreditCard,
   Megaphone,
-  ClipboardList,
   UserCog,
   LifeBuoy,
 } from 'lucide-react';
@@ -44,7 +43,6 @@ export const STOCK_SUBTABS: SubSectionItem<StockSubTab>[] = [
 export const COMPRA_SUBTABS: SubSectionItem<CompraSubTab>[] = [
   { id: 'facturas', label: 'Facturas de compra', icon: Receipt },
   { id: 'proveedores', label: 'Proveedores', icon: Truck },
-  { id: 'ordenes', label: 'Órdenes de compra', icon: ClipboardList },
 ];
 
 export const ADMIN_SUBTABS: SubSectionItem<AdminSubTab>[] = [

@@ -12,7 +12,7 @@ export const Footer: React.FC = () => {
   const { setContactModalOpen } = useApp();
 
   return (
-    <footer className="w-full bg-slate-100 text-slate-500 py-3 px-4 sm:px-6 border-t border-slate-200 text-xs print:hidden">
+    <footer className="w-full backdrop-blur-xl bg-white/85 text-slate-500 py-3 px-4 sm:px-6 border-t border-slate-200/80 text-xs transition-colors duration-200 print:hidden">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
         {/* Left: Brand info + qué servidor de UI respondió (para ver el balanceo entre nodos) */}
         <div className="flex items-center space-x-2 text-slate-500">

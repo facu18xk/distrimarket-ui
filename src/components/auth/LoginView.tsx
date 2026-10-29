@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Lock, User, ArrowRight, Mail, HelpCircle } from 'lucide-react';
+import { ShoppingCart, Lock, User, ArrowRight, HelpCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FeedbackBanner } from '../common/FormControls';
 
@@ -21,26 +21,6 @@ export const LoginView: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100">
-      {/* Top Banner matching Figma */}
-      <header
-        className="sobre-primario w-full py-3.5 px-6 shadow-md flex items-center justify-between"
-        style={{ backgroundColor: theme.primaryHex }}
-      >
-        <div className="flex items-center space-x-2">
-          <div className="bg-white/20 p-1.5 rounded-lg flex items-center justify-center">
-            <ShoppingCart className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-white font-extrabold text-xl tracking-tight">DistriMarket</span>
-        </div>
-        <button
-          onClick={() => setContactModalOpen(true)}
-          className="text-white/90 hover:text-white text-xs font-semibold flex items-center space-x-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          <Mail className="w-3.5 h-3.5" />
-          <span>Ayuda / Contacto</span>
-        </button>
-      </header>
-
       {/* Main Login Card */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
