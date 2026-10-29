@@ -10,6 +10,8 @@ export interface UnauthorizedPageProps {
   detail?: string | null;
   /** Callback para iniciar sesión o ir a la vista de login. */
   onLogin?: () => void;
+  /** Callback para cerrar sesión o cambiar de cuenta. */
+  onLogout?: () => void;
   /** Callback para ir a la pantalla de inicio. */
   onHome?: () => void;
   /** Callback para reintentar la acción. */
@@ -26,6 +28,7 @@ export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({
   message,
   detail,
   onLogin,
+  onLogout,
   onHome,
   onRetry,
   actions,
@@ -36,6 +39,7 @@ export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({
     message={message}
     detail={detail}
     onLogin={onLogin}
+    onLogout={onLogout}
     onHome={onHome}
     onRetry={onRetry}
     actions={actions}

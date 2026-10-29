@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { FeedbackBanner, SubTabs } from '../common';
+import { ForbiddenPage, SubTabs } from '../common';
 import { ADMIN_SUBTABS } from '../../routing/navigation';
 import { MediosPagoPanel, TimbradosPanel } from './CatalogosPanel';
 import { UsuariosPanel } from './UsuariosPanel';
@@ -14,14 +14,17 @@ import { SoportePanel } from './SoportePanel';
  * Aquí se agregan las próximas configuraciones (de compras, inventario, etc.).
  */
 export const AdministracionModuleView: React.FC = () => {
-  const { adminSubTab, setAdminSubTab, isAdmin } = useApp();
+  const { adminSubTab, setAdminSubTab, isAdmin, goHome, logout } = useApp();
 
   // La pestaña no aparece para otros roles; esto cubre el acceso directo.
   if (!isAdmin) {
     return (
-      <div className="p-6 max-w-7xl w-full mx-auto">
-        <FeedbackBanner>Solo el administrador puede entrar a esta sección.</FeedbackBanner>
-      </div>
+      <ForbiddenPage
+        modulo="Administración"
+        detail="Solo los usuarios con rol de Administrador pueden acceder a esta sección."
+        onHome={goHome}
+        onLogout={logout}
+      />
     );
   }
 

@@ -14,6 +14,8 @@ export * from './SearchAndFilterBar';
 export * from './StatusBadge';
 export * from './SubTabs';
 export * from './ErrorPage';
+export * from './UnauthorizedPage';
+export * from './ForbiddenPage';
 export * from './ErrorBoundary';
 export * from './RemotePicker';
 export * from './EntityPickers';

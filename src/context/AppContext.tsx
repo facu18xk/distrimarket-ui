@@ -42,6 +42,7 @@ interface AppContextType {
   activeModule: MainModule;
   setActiveModule: (m: MainModule) => void;
   goHome: () => void;
+  navigate: (to: string) => void;
 
   // Falla del backend al cargar datos: se muestra la página de error 500
   serverError: string | null;
@@ -138,10 +139,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const route = resolveRoute(path, user.roles);
-  const activeModule = route.kind === 'notFound' ? homeModule(user.roles) : route.module;
-  // La barra de direcciones muestra siempre lo que se ve: /login sin sesión (la ruta pedida se
-  // conserva para después de entrar) y, con sesión, el módulo real (corrigiendo la raíz o un módulo sin permiso).
-  const urlVisible = !isLoggedIn ? LOGIN_PATH : route.kind === 'redirect' ? route.to : path;
+  const activeModule = 'module' in route && route.module ? route.module : homeModule(user.roles);
+  // La barra de direcciones muestra siempre lo que se ve: /login sin sesión (salvo pantallas de error público
+  // como /401 o /403) y, con sesión, el módulo real.
+  const isPublicError = path === '/401' || path === '/403' || path === '/unauthorized' || path === '/forbidden';
+  const urlVisible = !isLoggedIn ? (isPublicError ? path : LOGIN_PATH) : route.kind === 'redirect' ? route.to : path;
   useEffect(() => {
     if (window.location.pathname !== urlVisible) window.history.replaceState(null, '', urlVisible);
   }, [urlVisible, path]);
@@ -304,6 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         route,
         activeModule,
         goHome,
+        navigate,
         serverError,
         retryAfterServerError,
         retryKey,
