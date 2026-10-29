@@ -15,7 +15,9 @@ interface ModalDialogProps {
   subtitle?: string;
   children: React.ReactNode;
   /** Los formularios largos usan un modal ancho para repartir los campos en columnas y evitar scroll. */
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
+  className?: string;
+  bodyClassName?: string;
 }
 
 const ANCHOS = {
@@ -27,6 +29,9 @@ const ANCHOS = {
   '3xl': 'sm:max-w-3xl',
   '4xl': 'sm:max-w-4xl',
   '5xl': 'sm:max-w-5xl',
+  '6xl': 'sm:max-w-6xl',
+  '7xl': 'sm:max-w-7xl',
+  full: 'sm:max-w-[96vw]',
 } as const;
 
 /**
@@ -41,25 +46,28 @@ export const ModalDialog: React.FC<ModalDialogProps> = ({
   subtitle,
   children,
   maxWidth = 'lg',
+  className,
+  bodyClassName,
 }) => (
   <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
     {/* Un clic fuera no cierra el modal: no se pierde un formulario a medio cargar. Se cierra con la X, Cancelar o Esc. */}
     <DialogContent
       className={cn(
         'p-0 gap-0 overflow-hidden flex flex-col w-[calc(100vw-1rem)] max-w-none max-h-[calc(100dvh-1rem)]',
-        ANCHOS[maxWidth]
+        ANCHOS[maxWidth],
+        className
       )}
       onInteractOutside={(event) => event.preventDefault()}
     >
-      <DialogHeader className="px-4 sm:px-5 py-2.5 pr-12 border-b border-slate-100 bg-slate-50/50 shrink-0 text-left">
-        <DialogTitle className="text-base font-bold text-slate-900">{title}</DialogTitle>
+      <DialogHeader className="px-4 sm:px-6 py-3 sm:py-3.5 pr-12 border-b border-slate-100 bg-slate-50/50 shrink-0 text-left">
+        <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">{title}</DialogTitle>
         {subtitle ? (
           <DialogDescription className="text-xs text-slate-500 mt-0.5">{subtitle}</DialogDescription>
         ) : (
           <DialogDescription className="sr-only">Detalles del diálogo</DialogDescription>
         )}
       </DialogHeader>
-      <div className="px-4 py-3 sm:px-5 sm:py-4 overflow-y-auto overflow-x-hidden min-h-0 flex-1">{children}</div>
+      <div className={cn('px-4 py-3 sm:px-6 sm:py-5 overflow-y-auto overflow-x-hidden min-h-0 flex-1', bodyClassName)}>{children}</div>
     </DialogContent>
   </Dialog>
 );

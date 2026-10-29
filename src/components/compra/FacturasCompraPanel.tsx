@@ -20,10 +20,11 @@ import { comprasApi } from '../../services';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
 import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, normalizeTimbrado, padNumeroFactura } from '../../lib/paraguay';
-import type { CondicionCompra, DepositoResponseDTO, FacturaCompraResponseDTO, ProveedorResponseDTO } from '../../types/api';
+import type { CondicionCompra, DepositoResponseDTO, FacturaCompraResponseDTO, ProductoResponseDTO, ProveedorResponseDTO } from '../../types/api';
 import { cargarCatalogosCompra } from './catalogos';
 import { nombreProveedor } from '../../lib/proveedor';
 import { ProveedorFormModal } from './ProveedoresPanel';
+import { ProductoFormModal } from '../stock';
 
 const anulada = (f: FacturaCompraResponseDTO) => f.estado?.toUpperCase().startsWith('ANULAD');
 
@@ -50,7 +51,7 @@ export const FacturasCompraPanel: React.FC = () => {
     { header: 'Fecha', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
     { header: 'Proveedor', cell: (f) => nombreProveedor(f.proveedor) },
     { header: 'Condición', cell: (f) => (f.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'), className: 'text-slate-600' },
-    { header: 'Total', align: 'right', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
+    { header: 'Total', align: 'center', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
     { header: 'Estado', cell: (f) => <StatusBadge status={anulada(f) ? 'Anulada' : 'Activa'} /> },
     {
       header: 'Acciones',
@@ -108,7 +109,8 @@ export const FacturasCompraPanel: React.FC = () => {
         onClose={() => setFormOpen(false)}
         title="Registrar factura de compra"
         subtitle="Se cargan los datos tal como figuran en la factura del proveedor."
-        maxWidth="4xl"
+        maxWidth="6xl"
+        className="h-[88vh] max-h-[92vh]"
       >
         <FacturaCompraForm onClose={() => setFormOpen(false)} onSaved={facturas.reload} />
       </ModalDialog>
@@ -137,6 +139,16 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   const [condicion, setCondicion] = useState<CondicionCompra>('CONTADO');
   const [lineas, setLineas] = useState<LineItem[]>([newLineItem()]);
   const [altaProveedor, setAltaProveedor] = useState(false);
+  const [altaProductoParaLinea, setAltaProductoParaLinea] = useState<number | null>(null);
+
+  const handleProductoCreado = (nuevo: ProductoResponseDTO) => {
+    if (altaProductoParaLinea !== null) {
+      setLineas((actuales) =>
+        actuales.map((l) => (l.key === altaProductoParaLinea ? { ...l, producto: nuevo } : l))
+      );
+    }
+    setAltaProductoParaLinea(null);
+  };
 
   if (catalogos.error) return <FeedbackBanner>{catalogos.error}</FeedbackBanner>;
   if (!catalogos.data) return <p className="py-8 text-center text-xs text-slate-400">Cargando datos del formulario...</p>;
@@ -234,18 +246,30 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
           </FormField>
         </div>
 
-        <LineItemsEditor lines={lineas} onChange={setLineas} price="manual" />
+        <LineItemsEditor
+          lines={lineas}
+          onChange={setLineas}
+          price="manual"
+          onCrearProducto={(key) => setAltaProductoParaLinea(key)}
+        />
 
         {guardar.error && <FeedbackBanner>{guardar.error}</FeedbackBanner>}
 
         <FormActions onCancel={onClose} submitLabel="Registrar compra" loading={guardar.loading} icon={<Receipt className="w-3.5 h-3.5" />} />
       </form>
 
-      {/* Fuera del <form> de la factura: guardar el proveedor no debe enviar la factura. */}
+      {/* Fuera del <form> de la factura: guardar el proveedor o producto no debe enviar la factura. */}
       <ProveedorFormModal
         isOpen={altaProveedor}
         onClose={() => setAltaProveedor(false)}
         onSaved={(nuevo) => setProveedor(nuevo)}
+      />
+
+      <ProductoFormModal
+        isOpen={altaProductoParaLinea !== null}
+        onClose={() => setAltaProductoParaLinea(null)}
+        onSaved={handleProductoCreado}
+        permitirStockInicial={false}
       />
     </>
   );

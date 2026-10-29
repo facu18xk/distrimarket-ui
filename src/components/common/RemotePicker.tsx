@@ -106,7 +106,7 @@ export function RemotePicker<T>({
       </button>
 
       {abierto && (
-        <div className={cn('absolute z-30 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden text-xs', haciaArriba ? 'bottom-full mb-1' : 'mt-1')}>
+        <div className={cn('absolute z-50 min-w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden text-xs', haciaArriba ? 'bottom-full mb-1' : 'mt-1')}>
           {buscable && (
             <div className="relative border-b border-slate-100">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />

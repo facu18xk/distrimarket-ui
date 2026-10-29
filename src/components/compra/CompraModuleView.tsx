@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
-import { ActionButtons, ModalDialog, PagedTable, StatusBadge, SubTabs, type Column, type SubTab } from '../common';
+import { ActionButtons, ModalDialog, PagedTable, StatusBadge, SubTabs, type Column } from '../common';
 import { nombreProveedor } from '../../lib/proveedor';
 import { usePagedResource, usePorId } from '../../hooks';
 import { comprasApi, inventarioApi } from '../../services';
 import { formatMoney } from '../../lib/format';
 import type { OrdenCompraDTO } from '../../types/api';
+import { COMPRA_SUBTABS } from '../../routing/navigation';
+import { useApp } from '../../context/AppContext';
 import { FacturasCompraPanel } from './FacturasCompraPanel';
 import { ProveedoresPanel } from './ProveedoresPanel';
-
-type Tab = 'facturas' | 'proveedores' | 'ordenes';
-
-const TABS: SubTab<Tab>[] = [
-  { id: 'facturas', label: 'Facturas de compra' },
-  { id: 'proveedores', label: 'Proveedores' },
-  { id: 'ordenes', label: 'Órdenes de compra' },
-];
 
 /**
  * La orden trae proveedor y empleado por id: se pide cada id distinto de la página una sola vez
@@ -63,14 +57,14 @@ const OrdenesPanel: React.FC = () => {
 
 /** Módulo de compras: todo sale del microservicio de compras a través del gateway. */
 export const CompraModuleView: React.FC = () => {
-  const [tab, setTab] = useState<Tab>('facturas');
+  const { compraSubTab, setCompraSubTab } = useApp();
 
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-4 max-w-7xl w-full mx-auto">
-      <SubTabs tabs={TABS} value={tab} onChange={setTab} />
-      {tab === 'facturas' && <FacturasCompraPanel />}
-      {tab === 'proveedores' && <ProveedoresPanel />}
-      {tab === 'ordenes' && <OrdenesPanel />}
+      <SubTabs tabs={COMPRA_SUBTABS} value={compraSubTab} onChange={setCompraSubTab} />
+      {compraSubTab === 'facturas' && <FacturasCompraPanel />}
+      {compraSubTab === 'proveedores' && <ProveedoresPanel />}
+      {compraSubTab === 'ordenes' && <OrdenesPanel />}
     </div>
   );
 };

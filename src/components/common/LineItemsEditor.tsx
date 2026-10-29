@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { PackagePlus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { fieldClass } from './FormControls';
 import { formatMoney } from '../../lib/format';
@@ -10,6 +10,7 @@ interface LineItemsEditorProps {
   onChange: (lines: LineItem[]) => void;
   price?: PriceMode;
   title?: string;
+  onCrearProducto?: (lineKey: number) => void;
 }
 
 /**
@@ -18,7 +19,7 @@ interface LineItemsEditorProps {
  * ajustes de stock y las transferencias. Cada fila elige su producto con un selector
  * paginado (10 por vez), sin cargar todo el catálogo de productos.
  */
-export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = 'Productos' }: LineItemsEditorProps) {
+export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = 'Productos', onCrearProducto }: LineItemsEditorProps) {
   const update = (key: number, changes: Partial<LineItem>) =>
     onChange(lines.map((line) => (line.key === key ? { ...line, ...changes } : line)));
   const withPrice = price !== 'sin';
@@ -52,12 +53,36 @@ export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = '
               return (
                 <tr key={line.key}>
                   <td className="py-1.5 px-2">
-                    <ProductoPicker
-                      required
-                      mostrarPrecio={price === 'catalogo'}
-                      value={line.producto}
-                      onChange={(producto) => update(line.key, { producto })}
-                    />
+                    {onCrearProducto ? (
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <ProductoPicker
+                            required
+                            mostrarPrecio={price === 'catalogo'}
+                            value={line.producto}
+                            onChange={(producto) => update(line.key, { producto })}
+                            onCrearNuevo={() => onCrearProducto(line.key)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-9 shrink-0 text-slate-500 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50"
+                          onClick={() => onCrearProducto(line.key)}
+                          title="Crear producto nuevo"
+                        >
+                          <PackagePlus className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <ProductoPicker
+                        required
+                        mostrarPrecio={price === 'catalogo'}
+                        value={line.producto}
+                        onChange={(producto) => update(line.key, { producto })}
+                      />
+                    )}
                   </td>
                   <td className="py-1.5 px-2">
                     <input

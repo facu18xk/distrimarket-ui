@@ -1,19 +1,11 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import type { AdminSubTab } from '../../types';
-import { FeedbackBanner, SubTabs, type SubTab } from '../common';
+import { FeedbackBanner, SubTabs } from '../common';
+import { ADMIN_SUBTABS } from '../../routing/navigation';
 import { MediosPagoPanel, TimbradosPanel } from './CatalogosPanel';
 import { UsuariosPanel } from './UsuariosPanel';
 import { EmpleadosPanel } from './EmpleadosPanel';
 import { SoportePanel } from './SoportePanel';
-
-const TABS: SubTab<AdminSubTab>[] = [
-  { id: 'usuarios', label: 'Usuarios' },
-  { id: 'empleados', label: 'Empleados' },
-  { id: 'timbrados', label: 'Timbrados' },
-  { id: 'mediosPago', label: 'Medios de pago' },
-  { id: 'soporte', label: 'Soporte' },
-];
 
 /**
  * Administración: lo que configura el administrador para que el resto opere.
@@ -35,7 +27,7 @@ export const AdministracionModuleView: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-4 max-w-7xl w-full mx-auto">
-      <SubTabs tabs={TABS} value={adminSubTab} onChange={setAdminSubTab} />
+      <SubTabs tabs={ADMIN_SUBTABS} value={adminSubTab} onChange={setAdminSubTab} />
 
       {adminSubTab === 'usuarios' && <UsuariosPanel />}
       {adminSubTab === 'empleados' && <EmpleadosPanel />}

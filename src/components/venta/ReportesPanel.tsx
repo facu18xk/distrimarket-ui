@@ -128,7 +128,7 @@ const Indicador: React.FC<{ titulo: string; valor: string; nota?: string }> = ({
 const columnas = (nombre: string, mostrarNombre: (g: Grupo) => string = (g) => g.nombre): Column<Grupo>[] => [
   { header: nombre, cell: mostrarNombre, className: 'font-bold text-slate-900' },
   { header: 'Facturas', align: 'center', cell: (g) => g.cantidad },
-  { header: 'Total', align: 'right', cell: (g) => formatMoney(g.total), className: 'font-black text-slate-900' },
+  { header: 'Total', align: 'center', cell: (g) => formatMoney(g.total), className: 'font-black text-slate-900' },
 ];
 
 const Seccion: React.FC<{ titulo: string; filas: Grupo[]; columns: Column<Grupo>[] }> = ({ titulo, filas, columns }) => (

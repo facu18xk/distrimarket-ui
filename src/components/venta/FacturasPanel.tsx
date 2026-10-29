@@ -47,7 +47,7 @@ export const FacturasPanel: React.FC = () => {
       cell: (f) => (f.idEmpleado ? empleadoPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? '—',
       className: 'text-slate-600',
     },
-    { header: 'Total', align: 'right', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
+    { header: 'Total', align: 'center', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
     { header: 'Estado', cell: (f) => <StatusBadge status={f.estado === 'EMITIDA' ? 'Emitida' : 'Anulada'} /> },
     {
       header: 'Acciones',

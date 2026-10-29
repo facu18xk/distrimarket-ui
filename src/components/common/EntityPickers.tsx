@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from 'react';
+import { PackagePlus } from 'lucide-react';
 import { RemotePicker } from './RemotePicker';
 import { comprasApi, inventarioApi, ventasApi } from '../../services';
 import type { PageQuery } from '../../services/pagination';
@@ -25,16 +26,44 @@ const paginaDeProveedores = (query: PageQuery) => comprasApi.proveedores.list(qu
 const paginaDeClientes = (query: PageQuery) => ventasApi.clientes.list(query);
 
 
-export const ProductoPicker: FC<PickerProps<ProductoResponseDTO> & { mostrarPrecio?: boolean }> = ({ mostrarPrecio = true, ...props }) => (
+export interface ProductoPickerProps extends PickerProps<ProductoResponseDTO> {
+  mostrarPrecio?: boolean;
+  buscable?: boolean;
+  onCrearNuevo?: () => void;
+}
+
+export const ProductoPicker: FC<ProductoPickerProps> = ({
+  mostrarPrecio = true,
+  buscable = true,
+  onCrearNuevo,
+  ...props
+}) => (
   <RemotePicker
     {...props}
-    buscable
+    buscable={buscable}
     buscarPagina={paginaDeProductos}
     clave={(p) => p.id}
     etiqueta={(p) => p.nombre}
     detalle={mostrarPrecio ? (p) => formatMoney(p.precioVenta) : (p) => p.codigoBarra ?? ''}
     deshabilitado={(p) => !p.estado}
     placeholder={props.placeholder ?? 'Seleccionar producto...'}
+    pie={
+      onCrearNuevo ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCrearNuevo();
+          }}
+          className="w-full text-left px-3 py-2 flex items-center gap-2 font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+        >
+          <PackagePlus className="w-3.5 h-3.5" />
+          <span>Registrar producto nuevo</span>
+        </button>
+      ) : (
+        props.pie
+      )
+    }
   />
 );
 

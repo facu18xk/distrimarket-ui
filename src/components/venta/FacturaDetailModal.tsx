@@ -109,9 +109,9 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
               <tr>
                 <th className="py-2.5 px-3">Producto</th>
                 <th className="py-2.5 px-3 text-center">Cantidad</th>
-                <th className="py-2.5 px-3 text-right">Precio unit.</th>
-                <th className="py-2.5 px-3 text-right">IVA</th>
-                <th className="py-2.5 px-3 text-right">Subtotal</th>
+                <th className="py-2.5 px-3 text-center">Precio unit.</th>
+                <th className="py-2.5 px-3 text-center">IVA</th>
+                <th className="py-2.5 px-3 text-center">Subtotal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -121,9 +121,9 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
                     {productoPorId.has(d.idProducto) ? (productoPorId.get(d.idProducto)?.nombre ?? 'Producto dado de baja') : 'Cargando...'}
                   </td>
                   <td className="py-2.5 px-3 text-center">{d.cantidad}</td>
-                  <td className="py-2.5 px-3 text-right">{formatMoney(d.precioUnitario)}</td>
-                  <td className="py-2.5 px-3 text-right text-slate-500">{formatMoney(d.montoIva)}</td>
-                  <td className="py-2.5 px-3 text-right font-bold text-slate-900">{formatMoney(d.subtotal)}</td>
+                  <td className="py-2.5 px-3 text-center">{formatMoney(d.precioUnitario)}</td>
+                  <td className="py-2.5 px-3 text-center text-slate-500">{formatMoney(d.montoIva)}</td>
+                  <td className="py-2.5 px-3 text-center font-bold text-slate-900">{formatMoney(d.subtotal)}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import type { MainModule, VentaSubTab, AdminSubTab, UserProfile, ThemeConfig, ContactMessage } from '../types/distrimarket';
+import type { MainModule, VentaSubTab, StockSubTab, CompraSubTab, AdminSubTab, UserProfile, ThemeConfig, ContactMessage } from '../types/distrimarket';
 import type { RolUsuario, UsuarioResponseDTO } from '../types/api';
 import { THEME_PALETTES } from '../lib/theme';
 import { esHexValido, temaDesdeHex, textoSobre } from '../lib/color';
@@ -50,8 +50,13 @@ interface AppContextType {
   retryKey: number;
   ventaSubTab: VentaSubTab;
   setVentaSubTab: (t: VentaSubTab) => void;
+  stockSubTab: StockSubTab;
+  setStockSubTab: (t: StockSubTab) => void;
+  compraSubTab: CompraSubTab;
+  setCompraSubTab: (t: CompraSubTab) => void;
   adminSubTab: AdminSubTab;
   setAdminSubTab: (t: AdminSubTab) => void;
+  navigateToSubTab: (module: MainModule, subTab?: string) => void;
 
   // Modales globales
   contactModalOpen: boolean;
@@ -150,6 +155,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [ventaSubTab, setVentaSubTab] = useState<VentaSubTab>('facturas');
+  const [stockSubTab, setStockSubTab] = useState<StockSubTab>('productos');
+  const [compraSubTab, setCompraSubTab] = useState<CompraSubTab>('facturas');
   const [adminSubTab, setAdminSubTab] = useState<AdminSubTab>('usuarios');
 
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -227,6 +234,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setActiveModule = (module: MainModule) => {
     if (canAccess(module)) navigate(MODULE_PATHS[module]);
   };
+
+  const navigateToSubTab = (module: MainModule, subTab?: string) => {
+    if (!canAccess(module)) return;
+    if (subTab) {
+      if (module === 'venta') setVentaSubTab(subTab as VentaSubTab);
+      else if (module === 'stock') setStockSubTab(subTab as StockSubTab);
+      else if (module === 'compra') setCompraSubTab(subTab as CompraSubTab);
+      else if (module === 'administracion') setAdminSubTab(subTab as AdminSubTab);
+    }
+    navigate(MODULE_PATHS[module]);
+  };
+
   const goHome = () => navigate(MODULE_PATHS[homeModule(user.roles)]);
 
   const login = async (username: string, password: string): Promise<LoginResult> => {
@@ -289,8 +308,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         retryAfterServerError,
         retryKey,
         setActiveModule,
+        navigateToSubTab,
         ventaSubTab,
         setVentaSubTab,
+        stockSubTab,
+        setStockSubTab,
+        compraSubTab,
+        setCompraSubTab,
         adminSubTab,
         setAdminSubTab,
         contactModalOpen,

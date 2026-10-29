@@ -1,12 +1,14 @@
 import React from 'react';
 import { Eye, Edit3, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { cn } from '../../lib/utils';
 
 interface ActionButtonsProps {
   onView?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   showDelete?: boolean;
+  className?: string;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -14,9 +16,10 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   onEdit,
   onDelete,
   showDelete = true,
+  className,
 }) => {
   return (
-    <div className="flex items-center space-x-1 text-slate-400">
+    <div className={cn('flex items-center justify-center space-x-1 text-slate-400', className)}>
       {onView && (
         <Button
           variant="ghost"

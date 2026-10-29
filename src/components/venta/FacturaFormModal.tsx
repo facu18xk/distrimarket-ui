@@ -60,7 +60,8 @@ export const FacturaFormModal: React.FC<FacturaFormModalProps> = ({ isOpen, onCl
     onClose={onClose}
     title={idFactura ? 'Modificar factura' : 'Emitir factura de venta'}
     subtitle="El precio, el IVA y el stock se toman de inventario al guardar."
-    maxWidth="4xl"
+    maxWidth="6xl"
+    className="h-[88vh] max-h-[92vh]"
   >
     {/* El contenido se monta cada vez que se abre: datos de la factura a modificar, o formulario en blanco. */}
     {idFactura ? (
