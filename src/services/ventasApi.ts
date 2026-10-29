@@ -33,6 +33,16 @@ export type FacturaVentaFilters = {
 
 const FACTURAS = '/ventas/facturas-venta';
 
+/** Un producto en el reporte de ventas (lo agrupa el backend). */
+export interface ProductoVendidoDTO {
+  idProducto: number;
+  unidades: number;
+  /** IVA incluido. */
+  total: number;
+  /** En cuántas facturas aparece. */
+  facturas: number;
+}
+
 const promociones = crudResource<PromocionResponseDTO, PromocionRequestDTO>('/ventas/promociones');
 
 const clientes = crudResource<ClienteResponseDTO, ClienteRequestDTO>('/ventas/clientes');
@@ -54,6 +64,9 @@ export const ventasApi = {
     list: (query?: PageQuery, filters?: FacturaVentaFilters): Promise<PageResult<FacturaVentaResumenDTO>> =>
       getPage<FacturaVentaResumenDTO>(FACTURAS, query, filters),
     get: (id: number) => http.get<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`),
+    /** Reporte: productos más vendidos del período (solo facturas emitidas), ya ordenados por unidades. */
+    productosMasVendidos: (filtros: { fechaDesde: string; fechaHasta: string; idCliente?: number; idEmpleado?: number; idDeposito?: number }) =>
+      http.get<ProductoVendidoDTO[]>(`${FACTURAS}/reporte/productos`, filtros),
     create: (body: FacturaVentaRequestDTO) => http.post<FacturaVentaResponseDTO>(FACTURAS, body),
     update: (id: number, body: FacturaVentaRequestDTO) =>
       http.put<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`, body),

@@ -27,8 +27,11 @@ interface Filtros {
 
 interface Grupo {
   nombre: string;
+  /** Facturas. */
   cantidad: number;
   total: number;
+  /** Solo en productos: unidades vendidas. */
+  unidades?: number;
 }
 
 interface Reporte {
@@ -39,6 +42,9 @@ interface Reporte {
   totalAnulado: number;
   porDia: Grupo[];
   porCliente: Grupo[];
+  /** Los mismos clientes, ordenados por cuántas veces compraron. */
+  porFrecuencia: Grupo[];
+  productos: Grupo[];
   porVendedor: Grupo[];
   porMedioPago: Grupo[];
 }
@@ -71,6 +77,16 @@ async function cargarReporte(filtros: Filtros): Promise<Reporte> {
     idDeposito: filtros.idDeposito || undefined,
   };
 
+  // Los productos los agrupa el backend en una consulta (las cabeceras no traen las líneas).
+  // Con "Estado: Anuladas" no hay ventas que rankear: los productos son solo de facturas emitidas.
+  const productosVendidos = filtros.estado === 'ANULADA' ? Promise.resolve([]) : ventasApi.facturas.productosMasVendidos({
+    fechaDesde: filtros.fechaDesde,
+    fechaHasta: filtros.fechaHasta,
+    idCliente: filtros.idCliente || undefined,
+    idEmpleado: filtros.idEmpleado || undefined,
+    idDeposito: filtros.idDeposito || undefined,
+  });
+
   const facturas: FacturaVentaResumenDTO[] = [];
   let pagina = 1;
   let totalPaginas: number;
@@ -86,10 +102,14 @@ async function cargarReporte(filtros: Filtros): Promise<Reporte> {
   const anuladas = facturas.filter((f) => f.estado === 'ANULADA');
 
   const idsVendedores = [...new Set(emitidas.map((f) => f.idEmpleado).filter((id): id is number => Boolean(id)))];
-  const [vendedores, mediosPago] = await Promise.all([
+  const vendidos = await productosVendidos;
+  const [vendedores, mediosPago, productos] = await Promise.all([
     enTandas(idsVendedores, inventarioApi.empleados.ref),
     catalogos.mediosPago(),
+    // Nombre de cada producto distinto, una vez por id (ventas no guarda nombres de inventario).
+    enTandas(vendidos.map((p) => p.idProducto), inventarioApi.productos.ref),
   ]);
+  const productoPorId = new Map(productos);
   const vendedorPorId = new Map(vendedores.filter((par): par is readonly [number, EmpleadoResponseDTO] => par[1] !== null));
   const medioPagoPorId = indexar(mediosPago, (m) => m.idMedioPago);
 
@@ -101,6 +121,13 @@ async function cargarReporte(filtros: Filtros): Promise<Reporte> {
     totalAnulado: anuladas.reduce((suma, f) => suma + f.totalGeneral, 0),
     porDia: agrupar(emitidas, (f) => f.fechaEmision, (f) => f.totalGeneral).sort((a, b) => a.nombre.localeCompare(b.nombre)),
     porCliente: agrupar(emitidas, (f) => f.clienteNombre, (f) => f.totalGeneral).sort(porTotal),
+    porFrecuencia: agrupar(emitidas, (f) => f.clienteNombre, (f) => f.totalGeneral).sort((a, b) => b.cantidad - a.cantidad || b.total - a.total),
+    productos: vendidos.map((p) => ({
+      nombre: productoPorId.get(p.idProducto)?.nombre ?? `Producto #${p.idProducto}`,
+      cantidad: p.facturas,
+      total: p.total,
+      unidades: p.unidades,
+    })),
     porVendedor: agrupar(
       emitidas,
       (f) => (f.idEmpleado ? vendedorPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? 'Sin vendedor',
@@ -139,6 +166,21 @@ const PASO = 10;
  * Una sección del reporte: se puede plegar (clic en el título) y muestra primero las 5 mejores
  * filas; "Ver más" suma de a 10 y "Ver menos" vuelve a las 5. El PDF sale como se ve en pantalla.
  */
+/** Columnas del ranking de productos: unidades primero, que es por lo que se ordena. */
+const columnasProductos: Column<Grupo>[] = [
+  { header: 'Producto', cell: (g) => g.nombre, className: 'font-bold text-slate-900' },
+  { header: 'Unidades', align: 'center', cell: (g) => g.unidades ?? 0, className: 'font-black text-slate-900' },
+  { header: 'Facturas', align: 'center', cell: (g) => g.cantidad },
+  { header: 'Total', align: 'center', cell: (g) => formatMoney(g.total) },
+];
+
+/** Clientes por frecuencia: cuántas veces compraron, primero. */
+const columnasFrecuencia: Column<Grupo>[] = [
+  { header: 'Cliente', cell: (g) => g.nombre, className: 'font-bold text-slate-900' },
+  { header: 'Compras', align: 'center', cell: (g) => g.cantidad, className: 'font-black text-slate-900' },
+  { header: 'Total', align: 'center', cell: (g) => formatMoney(g.total) },
+];
+
 const Seccion: React.FC<{ titulo: string; filas: Grupo[]; columns: Column<Grupo>[] }> = ({ titulo, filas, columns }) => {
   const [abierta, setAbierta] = useState(true);
   const [limite, setLimite] = useState(INICIALES);
@@ -309,7 +351,9 @@ export const ReportesPanel: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Seccion titulo="Mejores clientes" filas={datos.porCliente} columns={columnas('Cliente')} />
+            <Seccion titulo="Productos más vendidos" filas={datos.productos} columns={columnasProductos} />
+            <Seccion titulo="Mejores clientes (por monto)" filas={datos.porCliente} columns={columnas('Cliente')} />
+            <Seccion titulo="Clientes más frecuentes (por compras)" filas={datos.porFrecuencia} columns={columnasFrecuencia} />
             <Seccion titulo="Ventas por vendedor" filas={datos.porVendedor} columns={columnas('Vendedor')} />
             <Seccion titulo="Ventas por medio de pago" filas={datos.porMedioPago} columns={columnas('Medio de pago')} />
             <Seccion titulo="Ventas por día" filas={datos.porDia} columns={columnas('Fecha', (g) => formatDate(g.nombre))} />
