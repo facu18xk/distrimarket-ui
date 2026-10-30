@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext';
 import { ExistenciasPanel } from './ExistenciasPanel';
 import { AjustesPanel, TransferenciasPanel } from './MovimientosPanel';
 import { ProductosPanel } from './ProductosPanel';
+import {ReportesInventarioPanel} from "./ReportesInventarioPanel.tsx";
 
 /** Módulo de stock: todo sale del microservicio de inventario a través del gateway. */
 export const StockModuleView: React.FC = () => {
@@ -19,6 +20,7 @@ export const StockModuleView: React.FC = () => {
       {stockSubTab === 'ajustes' && <AjustesPanel />}
       {stockSubTab === 'transferencias' && <TransferenciasPanel />}
       {stockSubTab === 'depositos' && <DepositosPanel />}
+      {stockSubTab === 'reportes' && <ReportesInventarioPanel />}
     </div>
   );
 };

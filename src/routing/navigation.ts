@@ -38,6 +38,7 @@ export const STOCK_SUBTABS: SubSectionItem<StockSubTab>[] = [
   { id: 'ajustes', label: 'Ajustes', icon: SlidersHorizontal },
   { id: 'transferencias', label: 'Transferencias', icon: ArrowLeftRight },
   { id: 'depositos', label: 'Depósitos', icon: Warehouse },
+  { id: 'reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
 export const COMPRA_SUBTABS: SubSectionItem<CompraSubTab>[] = [

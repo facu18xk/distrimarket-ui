@@ -27,12 +27,12 @@ export const ROLES: Record<Role, RoleInfo> = {
     modules: ['venta'],
   },
   DEPOSITERO: {
-    label: 'Encargado de depósito',
+    label: 'Depositero',
     description: 'Inventario y stock',
     modules: ['stock'],
   },
   COMPRADOR: {
-    label: 'Encargado de compras',
+    label: 'Comprador',
     description: 'Compras y proveedores',
     modules: ['compra'],
   },

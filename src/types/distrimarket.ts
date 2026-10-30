@@ -1,7 +1,7 @@
 import type { Role } from '../auth/roles';
 
 export type VentaSubTab = 'facturas' | 'clientes' | 'promociones' | 'reportes';
-export type StockSubTab = 'productos' | 'existencias' | 'ajustes' | 'transferencias' | 'depositos';
+export type StockSubTab = 'productos' | 'existencias' | 'ajustes' | 'transferencias' | 'depositos' | 'reportes';
 export type CompraSubTab = 'facturas' | 'proveedores';
 export type AdminSubTab = 'usuarios' | 'empleados' | 'timbrados' | 'mediosPago' | 'soporte';
 
