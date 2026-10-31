@@ -55,7 +55,7 @@ export const DepositosPanel: React.FC = () => {
         searchPlaceholder="Buscar por nombre o ubicación..."
         filters={
           isAdmin && (
-            <Button variant="emerald" onClick={() => abrir(null)}>
+            <Button variant="primario" onClick={() => abrir(null)}>
               <Plus />
               <span>Nuevo depósito</span>
             </Button>

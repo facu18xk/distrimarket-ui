@@ -85,7 +85,7 @@ export const ExistenciasPanel: React.FC = () => {
               />
             </div>
             {puedeEditar && (
-              <Button variant="emerald" onClick={() => abrir(null)}>
+              <Button variant="primario" onClick={() => abrir(null)}>
                 <Plus />
                 <span>Añadir existencia</span>
               </Button>

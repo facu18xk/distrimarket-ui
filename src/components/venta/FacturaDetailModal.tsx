@@ -1,6 +1,6 @@
 import { formatNumeroFactura } from '../../lib/paraguay';
 import React, { useCallback, useMemo } from 'react';
-import { Ban, Edit3, RotateCcw, Trash2 } from 'lucide-react';
+import { Ban, RotateCcw, Trash2 } from 'lucide-react';
 import { FeedbackBanner, ModalDialog, StatusBadge } from '../common';
 import { Button } from '../ui/button';
 import { useAsyncAction, useAsyncData, useConfirm, usePorId } from '../../hooks';
@@ -15,7 +15,6 @@ interface FacturaDetailModalProps {
   onClose: () => void;
   /** Se llama después de anular, reemitir o dar de baja. */
   onChanged: () => void;
-  onEdit: (idFactura: number) => void;
 }
 
 /** El detalle se monta solo con una factura elegida: así cada apertura pide la suya. */
@@ -26,7 +25,6 @@ const FacturaDetalle: React.FC<Omit<FacturaDetailModalProps, 'idFactura'> & { id
   idFactura,
   onClose,
   onChanged,
-  onEdit,
 }) => {
   const cargar = useCallback(() => ventasApi.facturas.get(idFactura), [idFactura]);
   const factura = useAsyncData(cargar);
@@ -42,7 +40,7 @@ const FacturaDetalle: React.FC<Omit<FacturaDetailModalProps, 'idFactura'> & { id
       </ModalDialog>
     );
   }
-  return <FacturaContenido factura={factura.data} onClose={onClose} onChanged={onChanged} onEdit={onEdit} />;
+  return <FacturaContenido factura={factura.data} onClose={onClose} onChanged={onChanged} />;
 };
 
 interface FacturaContenidoProps extends Omit<FacturaDetailModalProps, 'idFactura'> {
@@ -56,7 +54,7 @@ const Dato: React.FC<{ label: string; children: React.ReactNode }> = ({ label, c
   </div>
 );
 
-const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, onChanged, onEdit }) => {
+const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, onChanged }) => {
   const { isAdmin } = useApp();
   const accion = useAsyncAction();
   const confirm = useConfirm();
@@ -169,10 +167,6 @@ const FacturaContenido: React.FC<FacturaContenidoProps> = ({ factura, onClose, o
           <div className="flex items-center gap-2">
             {emitida ? (
               <>
-                <Button variant="outline" size="sm" disabled={accion.loading} onClick={() => onEdit(factura.idFacturaVenta)}>
-                  <Edit3 />
-                  <span>Modificar</span>
-                </Button>
                 <Button
                   variant="destructive"
                   size="sm"

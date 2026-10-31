@@ -58,7 +58,7 @@ export const MediosPagoPanel: React.FC = () => {
         label="medios de pago"
         searchPlaceholder="Buscar medio de pago..."
         filters={
-          <Button variant="emerald" onClick={() => abrir(null)}>
+          <Button variant="primario" onClick={() => abrir(null)}>
             <Plus />
             <span>Nuevo medio de pago</span>
           </Button>
@@ -156,7 +156,7 @@ export const TimbradosPanel: React.FC = () => {
         label="timbrados"
         searchPlaceholder="Buscar por número, sucursal o fecha..."
         filters={
-          <Button variant="emerald" onClick={() => abrir(null)}>
+          <Button variant="primario" onClick={() => abrir(null)}>
             <Plus />
             <span>Nuevo timbrado</span>
           </Button>

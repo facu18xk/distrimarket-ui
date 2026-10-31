@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Ban, Plus, Receipt, UserPlus } from 'lucide-react';
+import { Ban, Plus, Receipt } from 'lucide-react';
 import {
   ActionButtons,
   FeedbackBanner,
@@ -10,6 +10,7 @@ import {
   DepositoBuscador,
   PagedTable,
   ProveedorPicker,
+  BotonNuevo,
   StatusBadge,
   fieldClass,
   type Column,
@@ -19,7 +20,7 @@ import { useAsyncAction, useAsyncData, useConfirm, useDepositoAsignado, usePaged
 import { comprasApi } from '../../services';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
-import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, normalizeTimbrado, padNumeroFactura } from '../../lib/paraguay';
+import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, padNumeroFactura } from '../../lib/paraguay';
 import type { CondicionCompra, DepositoResponseDTO, FacturaCompraResponseDTO, ProductoResponseDTO, ProveedorResponseDTO } from '../../types/api';
 import { cargarCatalogosCompra } from './catalogos';
 import { nombreProveedor } from '../../lib/proveedor';
@@ -94,10 +95,10 @@ export const FacturasCompraPanel: React.FC = () => {
         columns={columns}
         rowKey={(f) => f.idFacturaCompra}
         label="facturas de compra"
-        searchPlaceholder="Buscar por número, timbrado o proveedor..."
+        searchPlaceholder="Buscar por número o proveedor..."
         onRowClick={setDetalle}
         filters={
-          <Button variant="emerald" onClick={() => setFormOpen(true)}>
+          <Button variant="primario" onClick={() => setFormOpen(true)}>
             <Plus />
             <span>Nueva factura de compra</span>
           </Button>
@@ -128,7 +129,6 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   const catalogos = useAsyncData(cargarCatalogosCompra);
   const guardar = useAsyncAction();
   const [numeroFactura, setNumeroFactura] = useState('');
-  const [timbrado, setTimbrado] = useState('');
   const [fechaEmision, setFechaEmision] = useState(todayIso());
   const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
   // El comprador compra siempre para su depósito asignado (el backend también lo impone).
@@ -156,16 +156,14 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
 
   const numeroCompleto = padNumeroFactura(numeroFactura);
   const errorNumero = numeroFactura && !NUMERO_FACTURA_PATTERN.test(numeroCompleto) ? 'El número debe tener el formato 001-001-0000001.' : null;
-  const errorTimbrado = timbrado && timbrado.length !== 8 ? 'El timbrado tiene 8 dígitos.' : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorNumero || errorTimbrado || !proveedor || !deposito) return;
+    if (errorNumero || !proveedor || !deposito) return;
     const ok = await guardar.run(() =>
       comprasApi.facturas.create({
         numeroFactura: numeroCompleto,
         fechaEmision,
-        timbrado,
         idProveedor: proveedor.idProveedor,
         idDeposito: deposito.id,
         idMedioPago: Number(idMedioPago),
@@ -189,12 +187,9 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
           <FormField label="Proveedor" required className="sm:col-span-2">
             <div className="flex gap-2">
               <div className="flex-1 min-w-0">
-                <ProveedorPicker required value={proveedor} onChange={setProveedor} />
+                <ProveedorPicker required value={proveedor} onChange={setProveedor} onCrearNuevo={() => setAltaProveedor(true)} />
               </div>
-              <Button type="button" variant="outline" className="shrink-0" onClick={() => setAltaProveedor(true)} title="Registrar proveedor nuevo">
-                <UserPlus />
-                <span>Nuevo</span>
-              </Button>
+              <BotonNuevo onClick={() => setAltaProveedor(true)} title="Crear proveedor nuevo" />
             </div>
           </FormField>
           <FormField label="Fecha de emisión" required>
@@ -212,17 +207,6 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
               placeholder="001-001-0000001"
             />
             {errorDeCampo(errorNumero)}
-          </FormField>
-          <FormField label="Timbrado del proveedor" required>
-            <input
-              className={fieldClass}
-              required
-              inputMode="numeric"
-              value={timbrado}
-              onChange={(e) => setTimbrado(normalizeTimbrado(e.target.value))}
-              placeholder="12345678"
-            />
-            {errorDeCampo(errorTimbrado)}
           </FormField>
           <FormField label="Condición" required>
             <select className={fieldClass} value={condicion} onChange={(e) => setCondicion(e.target.value as CondicionCompra)}>
@@ -283,7 +267,7 @@ const DetalleFacturaCompra: React.FC<{ factura: FacturaCompraResponseDTO | null;
     isOpen={factura !== null}
     onClose={onClose}
     title={factura ? `Factura de compra ${factura.numeroFactura ? formatNumeroFactura(factura.numeroFactura) : ''}` : ''}
-    subtitle={factura ? `Timbrado ${factura.timbrado} · ${factura.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'}` : undefined}
+    subtitle={factura ? `${factura.timbrado ? `Timbrado ${factura.timbrado} · ` : ''}${factura.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'}` : undefined}
     maxWidth="3xl"
   >
     {factura && (

@@ -55,7 +55,7 @@ export const FacturasPanel: React.FC = () => {
       cell: (f) => (
         <ActionButtons
           onView={() => setIdSeleccionada(f.idFacturaVenta)}
-          onEdit={f.estado === 'EMITIDA' ? () => abrirFormulario(f.idFacturaVenta) : undefined}
+          // Una factura emitida no se modifica: se anula y se emite una nueva (pedido de la cátedra).
           // Dar de baja es solo para ADMIN (también lo exige ventas); el vendedor puede anular.
           onDelete={
             isAdmin
@@ -98,7 +98,7 @@ export const FacturasPanel: React.FC = () => {
               <option value="EMITIDA">Emitidas</option>
               <option value="ANULADA">Anuladas</option>
             </select>
-            <Button variant="emerald" onClick={() => abrirFormulario(null)}>
+            <Button variant="primario" onClick={() => abrirFormulario(null)}>
               <Plus />
               <span>Nueva factura</span>
             </Button>
@@ -116,7 +116,6 @@ export const FacturasPanel: React.FC = () => {
         idFactura={idSeleccionada}
         onClose={() => setIdSeleccionada(null)}
         onChanged={facturas.reload}
-        onEdit={abrirFormulario}
       />
     </>
   );

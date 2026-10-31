@@ -134,7 +134,7 @@ export const AjustesPanel: React.FC = () => {
         filters={
           <>
             <FiltroDeposito value={filtro} onChange={setFiltro} depositos={depositos.data} titulo="Depósito" disabled={Boolean(asignado)} />
-            <Button variant="emerald" onClick={() => setFormOpen(true)}>
+            <Button variant="primario" onClick={() => setFormOpen(true)}>
               <Plus />
               <span>Nuevo ajuste</span>
             </Button>
@@ -178,7 +178,7 @@ export const TransferenciasPanel: React.FC = () => {
           <>
             <FiltroDeposito value={origen} onChange={setOrigen} depositos={depositos.data} titulo="Origen" />
             {isAdmin && (
-              <Button variant="emerald" onClick={() => setFormOpen(true)}>
+              <Button variant="primario" onClick={() => setFormOpen(true)}>
                 <Plus />
                 <span>Nueva transferencia</span>
               </Button>

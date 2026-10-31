@@ -53,7 +53,7 @@ export const ClientesPanel: React.FC = () => {
         label="clientes"
         searchPlaceholder="Buscar por nombre, CI, RUC, teléfono o correo..."
         filters={
-          <Button variant="emerald" onClick={() => abrirFormulario(null)}>
+          <Button variant="primario" onClick={() => abrirFormulario(null)}>
             <Plus />
             <span>Nuevo cliente</span>
           </Button>

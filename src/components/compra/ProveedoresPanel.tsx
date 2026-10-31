@@ -65,7 +65,7 @@ export const ProveedoresPanel: React.FC = () => {
         label="proveedores"
         searchPlaceholder="Buscar por nombre, razón social, RUC o CI..."
         filters={
-          <Button variant="emerald" onClick={() => abrir(null)}>
+          <Button variant="primario" onClick={() => abrir(null)}>
             <Plus />
             <span>Nuevo proveedor</span>
           </Button>

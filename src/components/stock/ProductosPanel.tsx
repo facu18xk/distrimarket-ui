@@ -113,7 +113,7 @@ export const ProductosPanel: React.FC = () => {
               ))}
             </select>
             {puedeEditar && (
-              <Button variant="emerald" onClick={() => abrir(null)}>
+              <Button variant="primario" onClick={() => abrir(null)}>
                 <Plus />
                 <span>Nuevo producto</span>
               </Button>

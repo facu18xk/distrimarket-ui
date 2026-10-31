@@ -29,14 +29,22 @@ export const newLineItem = (values: Partial<Omit<LineItem, 'key'>> = {}): LineIt
   ...values,
 });
 
-export function lineUnitPrice(line: LineItem, price: PriceMode): number {
+/** Porcentaje de descuento por id de producto (promociones vigentes); solo se usa en ventas. */
+export type Descuentos = Record<number, number>;
+
+/** Precio con descuento, en guaraníes enteros (igual que lo calcula ventas al guardar). */
+export const conDescuento = (precio: number, porcentaje?: number) =>
+  porcentaje ? Math.round((precio * (100 - Math.min(porcentaje, 100))) / 100) : precio;
+
+export function lineUnitPrice(line: LineItem, price: PriceMode, descuentos?: Descuentos): number {
   if (price === 'manual') return line.precioUnitario;
   if (price === 'sin') return 0;
-  return line.producto?.precioVenta ?? 0;
+  const precio = line.producto?.precioVenta ?? 0;
+  return line.producto ? conDescuento(precio, descuentos?.[line.producto.id]) : precio;
 }
 
-export function linesTotal(lines: LineItem[], price: PriceMode): number {
-  return lines.reduce((total, line) => total + lineUnitPrice(line, price) * line.cantidad, 0);
+export function linesTotal(lines: LineItem[], price: PriceMode, descuentos?: Descuentos): number {
+  return lines.reduce((total, line) => total + lineUnitPrice(line, price, descuentos) * line.cantidad, 0);
 }
 
 /** Lo que recibe el backend: id del producto y cantidad. */

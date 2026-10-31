@@ -34,7 +34,7 @@ export const PromocionesPanel: React.FC = () => {
     { header: 'Promoción', cell: (p) => p.titulo, className: 'font-bold text-slate-900' },
     { header: 'Descuento', align: 'center', cell: (p) => (p.porcentajeDescuento != null ? `${Number(p.porcentajeDescuento)}%` : '—') },
     { header: 'Vigencia', cell: vigencia, className: 'text-slate-600' },
-    { header: 'Productos', align: 'center', cell: (p) => p.idsProducto.length },
+    { header: 'Productos', align: 'center', cell: (p) => (p.idsProducto.length ? p.idsProducto.length : 'Todos') },
     { header: 'Correos', align: 'center', cell: (p) => p.correosEnviados ?? 0, className: 'text-slate-600' },
     { header: 'Estado', cell: (p) => <StatusBadge status={estado(p)} /> },
     {
@@ -66,7 +66,7 @@ export const PromocionesPanel: React.FC = () => {
         onRowClick={setDetalle}
         filters={
           isAdmin && (
-            <Button variant="emerald" onClick={() => abrir(null)}>
+            <Button variant="primario" onClick={() => abrir(null)}>
               <Plus />
               <span>Nueva promoción</span>
             </Button>
@@ -149,6 +149,7 @@ const DetallePromocion: React.FC<{
         <div>
           <span className="block text-slate-400 mb-1">Productos</span>
           <div className="flex flex-wrap gap-1.5">
+            {promocion.idsProducto.length === 0 && <span className="text-slate-500">Todos los clientes que compraron en el período.</span>}
             {promocion.idsProducto.map((id) => (
               <span key={id} className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
                 {productos.get(id)?.nombre ?? '…'}
@@ -205,7 +206,7 @@ const PromocionForm: React.FC<{ promocion: PromocionResponseDTO | null; onClose:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (ids.length === 0) return;
+    // Sin productos: la promoción va a todos los clientes que compraron en el período.
     const request: PromocionRequestDTO = {
       titulo: titulo.trim(),
       mensaje: mensaje.trim(),
@@ -250,11 +251,11 @@ const PromocionForm: React.FC<{ promocion: PromocionResponseDTO | null; onClose:
         </div>
 
         <div className="space-y-3 min-w-0">
-          <FormField label="Productos en promoción" required>
+          <FormField label="Productos en promoción" hint="Opcional. Sin productos, va a todos los clientes que compraron en el período.">
             <ProductoPicker value={selector} onChange={agregar} placeholder="Agregar producto..." />
           </FormField>
           <div className="flex flex-wrap gap-1.5 min-h-8">
-            {ids.length === 0 && <span className="text-xs text-slate-400">Agregue al menos un producto.</span>}
+            {ids.length === 0 && <span className="text-xs text-slate-400">Todos los productos: se envía a todos los clientes que compraron.</span>}
             {ids.map((id) => (
               <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-xs text-slate-700">
                 {agregados[id] ?? conocidos.get(id)?.nombre ?? '…'}

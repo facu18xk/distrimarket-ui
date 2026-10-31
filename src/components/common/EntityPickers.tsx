@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from 'react';
-import { PackagePlus } from 'lucide-react';
+import { PackagePlus, Plus, UserPlus } from 'lucide-react';
+import { Button } from '../ui/button';
 import { RemotePicker } from './RemotePicker';
 import { comprasApi, inventarioApi, ventasApi } from '../../services';
 import type { PageQuery } from '../../services/pagination';
@@ -26,6 +27,36 @@ const paginaDeProveedores = (query: PageQuery) => comprasApi.proveedores.list(qu
 const paginaDeClientes = (query: PageQuery) => ventasApi.clientes.list(query);
 
 
+/**
+ * Última opción de un selector con búsqueda: crear uno nuevo sin salir del formulario.
+ * Mismo aspecto en clientes, proveedores y productos.
+ */
+export function PieCrearNuevo({ texto, icono, onClick }: { texto: string; icono: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="w-full text-left px-3 py-2 flex items-center gap-2 font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
+    >
+      {icono}
+      <span>{texto}</span>
+    </button>
+  );
+}
+
+/** Botón "Nuevo" junto a un selector (proveedor, producto): el mismo en todos los formularios. */
+export function BotonNuevo({ onClick, title, disabled }: { onClick: () => void; title: string; disabled?: boolean }) {
+  return (
+    <Button type="button" variant="outline" className="h-9 shrink-0 px-3" onClick={onClick} title={title} disabled={disabled}>
+      <Plus />
+      <span>Nuevo</span>
+    </Button>
+  );
+}
+
 export interface ProductoPickerProps extends PickerProps<ProductoResponseDTO> {
   mostrarPrecio?: boolean;
   buscable?: boolean;
@@ -47,23 +78,7 @@ export const ProductoPicker: FC<ProductoPickerProps> = ({
     detalle={mostrarPrecio ? (p) => formatMoney(p.precioVenta) : (p) => p.codigoBarra ?? ''}
     deshabilitado={(p) => !p.estado}
     placeholder={props.placeholder ?? 'Seleccionar producto...'}
-    pie={
-      onCrearNuevo ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCrearNuevo();
-          }}
-          className="w-full text-left px-3 py-2 flex items-center gap-2 font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors"
-        >
-          <PackagePlus className="w-3.5 h-3.5" />
-          <span>Registrar producto nuevo</span>
-        </button>
-      ) : (
-        props.pie
-      )
-    }
+    pie={onCrearNuevo ? <PieCrearNuevo texto="Crear producto nuevo" icono={<PackagePlus className="w-3.5 h-3.5" />} onClick={onCrearNuevo} /> : props.pie}
   />
 );
 
@@ -79,9 +94,11 @@ export const EmpleadoPicker: FC<PickerProps<EmpleadoResponseDTO>> = (props) => (
   />
 );
 
-export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO>> = (props) => (
+/** Proveedores: con búsqueda y, si se pasa onCrearNuevo, "Crear proveedor nuevo" al fondo (como en clientes). */
+export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO> & { onCrearNuevo?: () => void }> = ({ onCrearNuevo, ...props }) => (
   <RemotePicker
     {...props}
+    pie={onCrearNuevo ? <PieCrearNuevo texto="Crear proveedor nuevo" icono={<UserPlus className="w-3.5 h-3.5" />} onClick={onCrearNuevo} /> : props.pie}
     buscable
     buscarPagina={paginaDeProveedores}
     clave={(p) => p.idProveedor}

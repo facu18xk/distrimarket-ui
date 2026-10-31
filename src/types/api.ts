@@ -215,7 +215,7 @@ export interface FacturaCompraResponseDTO {
   numeroFactura?: string;
   fechaEmision?: string;
   activo: boolean;
-  timbrado: string;
+  timbrado?: string;
   estado: string;
   condicionCompra: string;
   totalIva: number;
@@ -335,8 +335,8 @@ export interface FacturaCompraDetalleRequestDTO {
 export interface FacturaCompraRequestDTO {
   numeroFactura: string;
   fechaEmision: string;
-  /** Timbrado del proveedor (8 dígitos). */
-  timbrado: string;
+  /** Timbrado del proveedor: opcional, el formulario ya no lo pide. */
+  timbrado?: string;
   idProveedor: number;
   idDeposito: number;
   idMedioPago: number;

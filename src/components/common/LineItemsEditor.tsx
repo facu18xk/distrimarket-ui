@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { PackagePlus, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { CampoNumero } from './CampoNumero';
 import { formatMoney } from '../../lib/format';
-import { lineUnitPrice, linesTotal, newLineItem, type LineItem, type PriceMode } from '../../lib/lineItems';
-import { ProductoPicker } from './EntityPickers';
+import { lineUnitPrice, linesTotal, newLineItem, type Descuentos, type LineItem, type PriceMode } from '../../lib/lineItems';
+import { BotonNuevo, ProductoPicker } from './EntityPickers';
 import { ApiError, inventarioApi } from '../../services';
 
 /**
@@ -29,6 +29,8 @@ interface LineItemsEditorProps {
   title?: string;
   onCrearProducto?: (lineKey: number) => void;
   deposito?: ControlDeposito;
+  /** Ventas: descuento de promociones vigentes por producto (el precio del producto no cambia). */
+  descuentos?: Descuentos;
 }
 
 /** Stock de cada producto en un depósito: undefined = consultando, null = no se pudo consultar. */
@@ -65,7 +67,7 @@ function useDisponibles(idDeposito: number | null, idsProducto: number[], activo
  * ajustes de stock y las transferencias. Cada fila elige su producto con un selector
  * paginado (10 por vez), sin cargar todo el catálogo de productos.
  */
-export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = 'Productos', onCrearProducto, deposito }: LineItemsEditorProps) {
+export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = 'Productos', onCrearProducto, deposito, descuentos }: LineItemsEditorProps) {
   const update = (key: number, changes: Partial<LineItem>) =>
     onChange(lines.map((line) => (line.key === key ? { ...line, ...changes } : line)));
   const withPrice = price !== 'sin';
@@ -100,7 +102,7 @@ export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = '
           size="sm"
           disabled={sinDeposito}
           title={sinDeposito ? 'Elija primero el depósito' : undefined}
-          onClick={() => onChange([...lines, newLineItem()])}
+          onClick={() => onChange([newLineItem(), ...lines])}
         >
           <Plus />
           <span>Agregar producto</span>
@@ -122,7 +124,8 @@ export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = '
           </thead>
           <tbody className="divide-y divide-slate-100">
             {lines.map((line) => {
-              const unitPrice = lineUnitPrice(line, price);
+              const unitPrice = lineUnitPrice(line, price, descuentos);
+              const descuento = price === 'catalogo' && line.producto ? descuentos?.[line.producto.id] : undefined;
               const stock = avisoStock(line);
               const picker = (
                 <ProductoPicker
@@ -140,17 +143,7 @@ export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = '
                     {onCrearProducto ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex-1 min-w-0">{picker}</div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          disabled={sinDeposito}
-                          className="h-9 w-9 shrink-0 text-slate-500 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50"
-                          onClick={() => onCrearProducto(line.key)}
-                          title="Crear producto nuevo"
-                        >
-                          <PackagePlus className="w-3.5 h-3.5" />
-                        </Button>
+                        <BotonNuevo onClick={() => onCrearProducto(line.key)} title="Crear producto nuevo" disabled={sinDeposito} />
                       </div>
                     ) : (
                       picker
@@ -184,7 +177,17 @@ export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = '
                           onChange={(precio) => update(line.key, { precioUnitario: precio ?? 0 })}
                         />
                       ) : (
-                        <span className="block py-2">{formatMoney(unitPrice)}</span>
+                        <span className="block py-2" title={descuento ? `Promoción vigente: -${descuento}%` : undefined}>
+                          {descuento ? (
+                            <>
+                              <span className="block text-[10px] leading-tight text-slate-400 line-through">{formatMoney(line.producto?.precioVenta)}</span>
+                              <span className="font-semibold text-emerald-700">{formatMoney(unitPrice)}</span>
+                              <span className="ml-1 text-[10px] font-bold text-emerald-700">-{descuento}%</span>
+                            </>
+                          ) : (
+                            formatMoney(unitPrice)
+                          )}
+                        </span>
                       )}
                     </td>
                   )}
@@ -214,7 +217,7 @@ export function LineItemsEditor({ lines, onChange, price = 'catalogo', title = '
       {withPrice && (
         <div className="flex items-center justify-end gap-3 mt-3 text-sm">
           <span className="text-slate-500">{price === 'catalogo' ? 'Total estimado' : 'Total'}</span>
-          <span className="text-lg font-black text-slate-900">{formatMoney(linesTotal(lines, price))}</span>
+          <span className="text-lg font-black text-slate-900">{formatMoney(linesTotal(lines, price, descuentos))}</span>
         </div>
       )}
     </div>

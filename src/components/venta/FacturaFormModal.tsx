@@ -136,10 +136,28 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
         ? `Con este timbrado el número debe empezar con ${prefijo}`
         : null;
 
+  // Promociones vigentes en la fecha de la factura: su descuento se ve en cada línea (ventas lo aplica al guardar).
+  const cargarDescuentos = useCallback(async () => {
+    const lista = await ventasApi.promociones.descuentosVigentes(fechaEmision);
+    return Object.fromEntries(lista.map((d) => [d.idProducto, Number(d.porcentaje)])) as Record<number, number>;
+  }, [fechaEmision]);
+  const descuentos = useAsyncData(cargarDescuentos, Boolean(fechaEmision));
+
   const elegirTimbrado = (id: number | '') => {
     setIdTimbrado(id);
     const elegido = catalogos.data?.timbrados.find((t) => t.idTimbrado === id);
     if (!elegido || !exigirFormato) return;
+    // Factura nueva: el número es automático, el siguiente de la secuencia del timbrado.
+    if (!factura) {
+      setNumeroFactura(prefijoFactura(elegido.sucursal, elegido.puntoExpedicion));
+      ventasApi.facturas
+        .siguienteNumero(elegido.idTimbrado)
+        .then((r) => setNumeroFactura(r.numeroFactura))
+        .catch(() => {
+          // Si no se pudo calcular, queda el prefijo y el número se completa a mano.
+        });
+      return;
+    }
     // Se conserva lo ya escrito del número y se corrige solo el prefijo.
     const secuencia = maskNumeroFactura(numeroFactura).split('-')[2] ?? '';
     setNumeroFactura(prefijoFactura(elegido.sucursal, elegido.puntoExpedicion) + secuencia);
@@ -249,6 +267,7 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
             lines={lineas}
             onChange={setLineas}
             price="catalogo"
+            descuentos={descuentos.data ?? undefined}
             deposito={{ idDeposito: deposito?.id ?? null, verificarStock: true, reservado: factura && deposito?.id === factura.idDeposito ? reservadoDeFactura(factura) : undefined }}
           />
 

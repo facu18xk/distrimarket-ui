@@ -80,7 +80,7 @@ export const UsuariosPanel: React.FC = () => {
         searchPlaceholder="Buscar por usuario, nombre o documento..."
         emptyMessage="No hay usuarios que coincidan con la búsqueda."
         filters={
-          <Button variant="emerald" onClick={() => abrir(null)}>
+          <Button variant="primario" onClick={() => abrir(null)}>
             <UserPlus />
             <span>Registrar usuario</span>
           </Button>

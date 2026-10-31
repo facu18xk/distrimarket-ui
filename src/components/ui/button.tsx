@@ -19,6 +19,10 @@ const buttonVariants = cva(
         ghost: "hover:bg-slate-100 hover:text-slate-900 text-slate-600",
         link: "text-slate-900 underline-offset-4 hover:underline",
         emerald: "bg-emerald-600 text-white shadow-xs hover:bg-emerald-700",
+        // Botón principal de agregar (Nuevo cliente, Nueva factura...): toma el color que eligió el usuario.
+        // sobre-primario pone el texto en negro si el color es muy claro.
+        primario:
+          "sobre-primario bg-[var(--user-primary-color)] text-white shadow-xs hover:bg-[var(--user-hover-color)]",
       },
       size: {
         default: "h-9 px-4 py-2",

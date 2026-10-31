@@ -33,6 +33,14 @@ export type FacturaVentaFilters = {
 
 const FACTURAS = '/ventas/facturas-venta';
 
+/** Descuento de una promoción vigente sobre un producto (lo aplica ventas al guardar la factura). */
+export interface DescuentoVigenteDTO {
+  idProducto: number;
+  porcentaje: number;
+  idPromocion: number;
+  titulo: string;
+}
+
 /** Un producto en el reporte de ventas (lo agrupa el backend). */
 export interface ProductoVendidoDTO {
   idProducto: number;
@@ -64,6 +72,9 @@ export const ventasApi = {
     list: (query?: PageQuery, filters?: FacturaVentaFilters): Promise<PageResult<FacturaVentaResumenDTO>> =>
       getPage<FacturaVentaResumenDTO>(FACTURAS, query, filters),
     get: (id: number) => http.get<FacturaVentaResponseDTO>(`${FACTURAS}/${id}`),
+    /** Número de factura automático: el siguiente de la secuencia del timbrado. */
+    siguienteNumero: (idTimbrado: number) =>
+      http.get<{ numeroFactura: string }>(`${FACTURAS}/siguiente-numero`, { idTimbrado }),
     /** Reporte: productos más vendidos del período (solo facturas emitidas), ya ordenados por unidades. */
     productosMasVendidos: (filtros: { fechaDesde: string; fechaHasta: string; idCliente?: number; idEmpleado?: number; idDeposito?: number }) =>
       http.get<ProductoVendidoDTO[]>(`${FACTURAS}/reporte/productos`, filtros),
@@ -87,5 +98,7 @@ export const ventasApi = {
     ...promociones,
     destinatarios: (id: number) => http.get<PromocionDestinatariosDTO>(`/ventas/promociones/${id}/destinatarios`),
     enviarAhora: (id: number) => http.post<PromocionResponseDTO>(`/ventas/promociones/${id}/enviar`, {}),
+    /** Descuentos vigentes en una fecha (yyyy-MM-dd), uno por producto (el mayor si hay varios). */
+    descuentosVigentes: (fecha: string) => http.get<DescuentoVigenteDTO[]>('/ventas/promociones/descuentos-vigentes', { fecha }),
   },
 };
