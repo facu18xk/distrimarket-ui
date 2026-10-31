@@ -99,7 +99,3 @@ Todas las pantallas siguen el mismo esquema. El ejemplo más corto es
 Los tres microservicios paginan con nombres distintos; `services/pagination.ts` los unifica,
 así que las pantallas no necesitan saber de cuál viene el dato.
 
-## Pendiente
-
-- Promociones no tiene microservicio: el módulo se quitó hasta que exista.
-- El formulario de contacto no tiene backend: el mensaje no se envía ni se guarda.
