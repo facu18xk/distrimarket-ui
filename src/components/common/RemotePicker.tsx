@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import { fieldClass } from './FormControls';
 import { usePagedResource } from '../../hooks/usePagedResource';
-import { useHaciaArriba } from '../../hooks/useHaciaArriba';
+import { usePosicionFlotante } from '../../hooks/usePosicionFlotante';
 import { cn } from '../../lib/utils';
 import type { PageQuery, PageResult } from '../../services/pagination';
 
@@ -47,7 +47,8 @@ export function RemotePicker<T>({
   const [abierto, setAbierto] = useState(false);
   const contenedor = useRef<HTMLDivElement>(null);
   const opciones = usePagedResource<T>(buscarPagina, { enabled: abierto });
-  const haciaArriba = useHaciaArriba(contenedor, abierto);
+  // La lista se ubica respecto de la ventana: dentro de un modal no queda cortada.
+  const flotante = usePosicionFlotante(contenedor, abierto);
 
   // Clic fuera de la lista: se cierra.
   useEffect(() => {
@@ -106,7 +107,7 @@ export function RemotePicker<T>({
       </button>
 
       {abierto && (
-        <div className={cn('absolute z-50 min-w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden text-xs', haciaArriba ? 'bottom-full mb-1' : 'mt-1')}>
+        <div style={flotante} className="bg-white border border-slate-200 rounded-xl shadow-xl text-xs">
           {buscable && (
             <div className="relative border-b border-slate-100">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />

@@ -22,6 +22,7 @@ import type { ProveedorResponseDTO } from '../../types/api';
 
 export const ProveedoresPanel: React.FC = () => {
   const [estado, setEstado] = useState<'' | 'activo' | 'inactivo'>('');
+  void [setEstado]; // los usan los filtros comentados
   const filtros: ProveedorFilters | undefined =
     estado === '' ? undefined : { estado: estado === 'activo' };
   const proveedores = usePagedResource<ProveedorResponseDTO, ProveedorFilters>(comprasApi.proveedores.list, {
@@ -72,6 +73,7 @@ export const ProveedoresPanel: React.FC = () => {
         searchPlaceholder="Buscar por nombre, razón social, RUC o CI..."
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <select
               className={cn(fieldClass, 'w-auto bg-white h-9')}
               value={estado}
@@ -83,6 +85,7 @@ export const ProveedoresPanel: React.FC = () => {
               <option value="activo">Activos</option>
               <option value="inactivo">Inactivos</option>
             </select>
+            */}
             <Button variant="primario" onClick={() => abrir(null)}>
               <Plus />
               <span>Nuevo proveedor</span>
@@ -164,3 +167,7 @@ const ProveedorForm: React.FC<Omit<ProveedorFormModalProps, 'isOpen'>> = ({ onCl
     </form>
   );
 };
+
+
+// Los filtros de la tabla están comentados: estas referencias evitan errores de "sin usar" hasta descomentarlos.
+void [cn];

@@ -15,7 +15,9 @@ type Filtro = { atendido?: boolean };
  * Un job de ventas los reenvía al correo de soporte; acá se ve si el correo salió y se marcan como atendidos.
  */
 export const SoportePanel: React.FC = () => {
-  const [verAtendidos, setVerAtendidos] = useState<'' | 'no' | 'si'>('no');
+  // Con el filtro comentado se ven todos los mensajes (antes arrancaba en 'no' = pendientes).
+  const [verAtendidos, setVerAtendidos] = useState<'' | 'no' | 'si'>('');
+  void [setVerAtendidos]; // los usan los filtros comentados
   const mensajes = usePagedResource<ContactoMensajeResponseDTO, Filtro>(ventasApi.soporte.mensajes, {
     filters: verAtendidos === '' ? undefined : { atendido: verAtendidos === 'si' },
   });
@@ -51,11 +53,13 @@ export const SoportePanel: React.FC = () => {
         label="mensajes"
         onRowClick={setAbierto}
         filters={
+          undefined /* Filtro oculto por ahora. Para volver a mostrarlo, descomentar:
           <select className={cn(fieldClass, 'w-auto bg-white h-9')} value={verAtendidos} onChange={(e) => setVerAtendidos(e.target.value as '' | 'no' | 'si')}>
             <option value="no">Pendientes</option>
             <option value="si">Atendidos</option>
             <option value="">Todos</option>
           </select>
+          */
         }
       />
       <ModalDialog isOpen={abierto !== null} onClose={() => setAbierto(null)} title={abierto?.asunto ?? ''} subtitle={abierto ? `${abierto.nombre} <${abierto.correo}> · ${formatDate(abierto.fechaEnvio)}` : undefined} maxWidth="lg">
@@ -81,3 +85,7 @@ export const SoportePanel: React.FC = () => {
     </>
   );
 };
+
+
+// Los filtros de la tabla están comentados: estas referencias evitan errores de "sin usar" hasta descomentarlos.
+void [fieldClass, cn];

@@ -34,11 +34,16 @@ type EstadoFacturaCompra = 'ACTIVA' | 'ANULADA';
 
 export const FacturasCompraPanel: React.FC = () => {
   const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
+  void [setProveedor]; // los usan los filtros comentados
   const [estado, setEstado] = useState<EstadoFacturaCompra | ''>('');
+  void [setEstado]; // los usan los filtros comentados
   const [numeroFactura, setNumeroFactura] = useState('');
+  void [setNumeroFactura]; // los usan los filtros comentados
   const numeroFacturaDebounced = useDebounce(numeroFactura, 350);
   const [desde, setDesde] = useState('');
+  void [setDesde]; // los usan los filtros comentados
   const [hasta, setHasta] = useState('');
+  void [setHasta]; // los usan los filtros comentados
   const filtros: FacturaCompraFilters | undefined =
     proveedor || estado || numeroFacturaDebounced.trim() || desde || hasta
       ? {
@@ -120,6 +125,7 @@ export const FacturasCompraPanel: React.FC = () => {
         onRowClick={setDetalle}
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <div className="w-full sm:w-56">
               <ProveedorPicker value={proveedor} onChange={setProveedor} placeholder="Todos los proveedores" />
             </div>
@@ -161,6 +167,7 @@ export const FacturasCompraPanel: React.FC = () => {
               title="Fecha de emisión hasta"
               aria-label="Fecha de emisión hasta"
             />
+            */}
             <Button variant="primario" onClick={() => setFormOpen(true)}>
               <Plus />
               <span>Nueva factura de compra</span>
@@ -387,3 +394,7 @@ const DetalleFacturaCompra: React.FC<{ factura: FacturaCompraResponseDTO | null;
     )}
   </ModalDialog>
 );
+
+
+// Los filtros de la tabla están comentados: estas referencias evitan errores de "sin usar" hasta descomentarlos.
+void [cn];

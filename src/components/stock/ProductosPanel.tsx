@@ -36,8 +36,11 @@ export const ProductosPanel: React.FC = () => {
   const puedeEditar = hasRole('ADMIN') || hasRole('DEPOSITERO');
   const clasificaciones = useAsyncData(cargarClasificaciones);
   const [categoriaId, setCategoriaId] = useState<number | ''>('');
+  void [setCategoriaId]; // los usan los filtros comentados
   const [marcaId, setMarcaId] = useState<number | ''>('');
+  void [setMarcaId]; // los usan los filtros comentados
   const [estado, setEstado] = useState<'' | 'activo' | 'inactivo'>('');
+  void [setEstado]; // los usan los filtros comentados
   const filtros: FiltrosProducto | undefined =
     categoriaId === '' && marcaId === '' && estado === ''
       ? undefined
@@ -89,6 +92,7 @@ export const ProductosPanel: React.FC = () => {
   ];
 
   const filtro = 'w-auto bg-white h-9';
+  void [filtro]; // los usan los filtros comentados
 
   return (
     <>
@@ -99,10 +103,11 @@ export const ProductosPanel: React.FC = () => {
         columns={columns}
         rowKey={(p) => p.id}
         label="productos"
-        searchPlaceholder="Buscar por nombre o código de barras..."
+        searchPlaceholder="Buscar por nombre, código de barras, categoría o marca..."
         emptyMessage="No hay productos con la búsqueda o los filtros elegidos."
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <select className={cn(fieldClass, filtro)} value={categoriaId} onChange={(e) => setCategoriaId(e.target.value === '' ? '' : Number(e.target.value))} title="Filtrar por categoría">
               <option value="">Todas las categorías</option>
               {clasificaciones.data?.categorias.map((c) => (
@@ -129,6 +134,7 @@ export const ProductosPanel: React.FC = () => {
               <option value="activo">Activos</option>
               <option value="inactivo">Inactivos</option>
             </select>
+            */}
             {puedeEditar && (
               <Button variant="primario" onClick={() => abrir(null)}>
                 <Plus />

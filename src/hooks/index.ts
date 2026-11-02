@@ -9,4 +9,5 @@ export * from './useConfirm';
 export * from './useRemove';
 export * from './useEmpleadoPorDefecto';
 export * from './useHaciaArriba';
+export * from './usePosicionFlotante';
 export * from './useDepositoAsignado';
