@@ -55,6 +55,8 @@ export function PagedTable<T>({
         onRetry={resource.reload}
         emptyMessage={emptyMessage}
         onRowClick={onRowClick}
+        sort={resource.sort}
+        onSortChange={resource.setSort}
       />
 
       <PaginationBar

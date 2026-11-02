@@ -14,13 +14,19 @@ import {
 } from '../common';
 import { Button } from '../ui/button';
 import { useAsyncAction, usePagedResource, useRemove } from '../../hooks';
-import { comprasApi } from '../../services';
+import { comprasApi, type ProveedorFilters } from '../../services';
 import { formatDocumento, formatPhone } from '../../lib/paraguay';
 import { PERSONA_VACIA, hasPersonaErrors, personaARequest, personaDesdeDto, personaErrors, type PersonaForm } from '../../lib/persona';
+import { cn } from '../../lib/utils';
 import type { ProveedorResponseDTO } from '../../types/api';
 
 export const ProveedoresPanel: React.FC = () => {
-  const proveedores = usePagedResource(comprasApi.proveedores.list);
+  const [estado, setEstado] = useState<'' | 'activo' | 'inactivo'>('');
+  const filtros: ProveedorFilters | undefined =
+    estado === '' ? undefined : { estado: estado === 'activo' };
+  const proveedores = usePagedResource<ProveedorResponseDTO, ProveedorFilters>(comprasApi.proveedores.list, {
+    filters: filtros,
+  });
   const baja = useRemove(proveedores.reload);
   const [formOpen, setFormOpen] = useState(false);
   const [enEdicion, setEnEdicion] = useState<ProveedorResponseDTO | null>(null);
@@ -31,12 +37,12 @@ export const ProveedoresPanel: React.FC = () => {
   };
 
   const columns: Column<ProveedorResponseDTO>[] = [
-    { header: 'Proveedor', cell: (p) => p.nombreFantasia || p.persona.nombreCompleto, className: 'font-bold text-slate-900' },
+    { header: 'Proveedor', sortKey: 'nombreFantasia', cell: (p) => p.nombreFantasia || p.persona.nombreCompleto, className: 'font-bold text-slate-900' },
     { header: 'Razón social', cell: (p) => p.persona.nombreCompleto, className: 'text-slate-600' },
     { header: 'CI / RUC', cell: (p) => formatDocumento(p.persona.ci, p.persona.ruc), className: 'text-slate-600' },
     { header: 'Teléfono', cell: (p) => formatPhone(p.persona.telefono) || '—', className: 'text-slate-600' },
     { header: 'Correo', cell: (p) => p.persona.correo ?? '—', className: 'text-slate-500 text-xs' },
-    { header: 'Estado', cell: (p) => <StatusBadge status={p.estado ? 'Activo' : 'Inactivo'} /> },
+    { header: 'Estado', sortKey: 'estado', cell: (p) => <StatusBadge status={p.estado ? 'Activo' : 'Inactivo'} /> },
     {
       header: 'Acciones',
       align: 'center',
@@ -65,10 +71,23 @@ export const ProveedoresPanel: React.FC = () => {
         label="proveedores"
         searchPlaceholder="Buscar por nombre, razón social, RUC o CI..."
         filters={
-          <Button variant="primario" onClick={() => abrir(null)}>
-            <Plus />
-            <span>Nuevo proveedor</span>
-          </Button>
+          <>
+            <select
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as '' | 'activo' | 'inactivo')}
+              title="Filtrar por estado"
+              aria-label="Filtrar por estado"
+            >
+              <option value="">Todos los estados</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
+            </select>
+            <Button variant="primario" onClick={() => abrir(null)}>
+              <Plus />
+              <span>Nuevo proveedor</span>
+            </Button>
+          </>
         }
       />
 

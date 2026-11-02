@@ -1,27 +1,37 @@
 import React, { useState } from 'react';
 import { Save } from 'lucide-react';
 import { ActionButtons, DepositoBuscador, FeedbackBanner, FormActions, FormField, ModalDialog, PagedTable, StatusBadge, fieldClass, type Column } from '../common';
-import { useAsyncAction, useAsyncData, usePagedResource } from '../../hooks';
+import { useAsyncAction, useAsyncData, useDebounce, usePagedResource } from '../../hooks';
 import { depositosActivos, inventarioApi } from '../../services';
 import { formatDate } from '../../lib/format';
 import { formatDocumento } from '../../lib/paraguay';
+import { cn } from '../../lib/utils';
 import type { DepositoResponseDTO, EmpleadoRequestDTO, EmpleadoResponseDTO } from '../../types/api';
+
+type FiltrosEmpleado = { cargo?: string; estado?: boolean };
 
 /**
  * Empleados (inventario): el administrador asigna a cada uno el depósito donde trabaja. Ese depósito
  * viaja en el token: vendedor, comprador y depositero operan siempre sobre él, sin elegirlo.
  */
 export const EmpleadosPanel: React.FC = () => {
-  const empleados = usePagedResource(inventarioApi.empleados.list);
+  const [cargo, setCargo] = useState('');
+  const cargoDebounced = useDebounce(cargo, 350);
+  const [estado, setEstado] = useState<'' | 'activo' | 'inactivo'>('');
+  const filtros: FiltrosEmpleado | undefined =
+    cargoDebounced.trim() || estado
+      ? { cargo: cargoDebounced.trim() || undefined, estado: estado === '' ? undefined : estado === 'activo' }
+      : undefined;
+  const empleados = usePagedResource<EmpleadoResponseDTO, FiltrosEmpleado>(inventarioApi.empleados.list, { filters: filtros });
   const [enEdicion, setEnEdicion] = useState<EmpleadoResponseDTO | null>(null);
 
   const columns: Column<EmpleadoResponseDTO>[] = [
     { header: 'Empleado', cell: (e) => e.persona.nombreCompleto, className: 'font-bold text-slate-900' },
     { header: 'CI', cell: (e) => formatDocumento(e.persona.ci, e.persona.ruc), className: 'text-slate-600' },
-    { header: 'Cargo', cell: (e) => e.cargo, className: 'text-slate-600' },
+    { header: 'Cargo', sortKey: 'cargo', cell: (e) => e.cargo, className: 'text-slate-600' },
     { header: 'Depósito', cell: (e) => e.nombreDeposito ?? <span className="text-slate-400">Sin asignar (elige en cada operación)</span> },
-    { header: 'Ingreso', cell: (e) => formatDate(e.fechaIngreso), className: 'text-slate-500 text-xs' },
-    { header: 'Estado', cell: (e) => <StatusBadge status={e.estado ? 'Activo' : 'Inactivo'} /> },
+    { header: 'Ingreso', sortKey: 'fechaIngreso', cell: (e) => formatDate(e.fechaIngreso), className: 'text-slate-500 text-xs' },
+    { header: 'Estado', sortKey: 'estado', cell: (e) => <StatusBadge status={e.estado ? 'Activo' : 'Inactivo'} /> },
     { header: 'Acciones', align: 'center', cell: (e) => <ActionButtons onEdit={() => setEnEdicion(e)} /> },
   ];
 
@@ -34,6 +44,28 @@ export const EmpleadosPanel: React.FC = () => {
         label="empleados"
         searchPlaceholder="Buscar por nombre, CI o cargo..."
         onRowClick={setEnEdicion}
+        filters={
+          <>
+            <input
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Cargo exacto (ej.: Vendedor)"
+              aria-label="Filtrar por cargo exacto"
+            />
+            <select
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as '' | 'activo' | 'inactivo')}
+              title="Filtrar por estado"
+              aria-label="Filtrar por estado"
+            >
+              <option value="">Todos los estados</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
+            </select>
+          </>
+        }
       />
       <ModalDialog
         isOpen={enEdicion !== null}

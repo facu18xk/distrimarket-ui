@@ -1,13 +1,29 @@
 import { formatNumeroFactura } from '../../lib/paraguay';
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { ActionButtons, FeedbackBanner, PagedTable, StatusBadge, fieldClass, type Column } from '../common';
+import {
+  ActionButtons,
+  ClienteSelector,
+  DepositoBuscador,
+  EmpleadoPicker,
+  FeedbackBanner,
+  PagedTable,
+  StatusBadge,
+  fieldClass,
+  type Column,
+} from '../common';
 import { Button } from '../ui/button';
-import { usePagedResource, usePorId, useRemove } from '../../hooks';
-import { inventarioApi, ventasApi, type FacturaVentaFilters } from '../../services';
+import { useAsyncData, usePagedResource, usePorId, useRemove } from '../../hooks';
+import { catalogos, inventarioApi, ventasApi, type FacturaVentaFilters } from '../../services';
 import { formatDate, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
-import type { EstadoFacturaVenta, FacturaVentaResumenDTO } from '../../types/api';
+import type {
+  ClienteResponseDTO,
+  DepositoResponseDTO,
+  EmpleadoResponseDTO,
+  EstadoFacturaVenta,
+  FacturaVentaResumenDTO,
+} from '../../types/api';
 import { FacturaDetailModal } from './FacturaDetailModal';
 import { FacturaFormModal } from './FacturaFormModal';
 import { useApp } from '../../context/AppContext';
@@ -21,8 +37,25 @@ import { useApp } from '../../context/AppContext';
 export const FacturasPanel: React.FC = () => {
   const { isAdmin } = useApp();
   const [estado, setEstado] = useState<EstadoFacturaVenta | ''>('');
+  const [cliente, setCliente] = useState<ClienteResponseDTO | null>(null);
+  const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
+  const [deposito, setDeposito] = useState<DepositoResponseDTO | null>(null);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const depositos = useAsyncData(catalogos.depositos);
+  const filtros: FacturaVentaFilters | undefined =
+    estado || cliente || empleado || deposito || fechaDesde || fechaHasta
+      ? {
+          estado: estado || undefined,
+          idCliente: cliente?.idCliente,
+          idEmpleado: empleado?.id,
+          idDeposito: deposito?.id,
+          fechaDesde: fechaDesde || undefined,
+          fechaHasta: fechaHasta || undefined,
+        }
+      : undefined;
   const facturas = usePagedResource<FacturaVentaResumenDTO, FacturaVentaFilters>(ventasApi.facturas.list, {
-    filters: estado ? { estado } : undefined,
+    filters: filtros,
     sort: 'id,desc',
   });
   const empleadoPorId = usePorId(inventarioApi.empleados.ref, facturas.items.map((f) => f.idEmpleado));
@@ -39,16 +72,16 @@ export const FacturasPanel: React.FC = () => {
   };
 
   const columns: Column<FacturaVentaResumenDTO>[] = [
-    { header: 'Número', cell: (f) => formatNumeroFactura(f.numeroFactura), className: 'font-bold text-slate-900' },
-    { header: 'Fecha', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
+    { header: 'Número', sortKey: 'numeroFactura', cell: (f) => formatNumeroFactura(f.numeroFactura), className: 'font-bold text-slate-900' },
+    { header: 'Fecha', sortKey: 'fechaEmision', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
     { header: 'Cliente', cell: (f) => f.clienteNombre },
     {
       header: 'Vendedor',
       cell: (f) => (f.idEmpleado ? empleadoPorId.get(f.idEmpleado)?.persona.nombreCompleto : undefined) ?? '—',
       className: 'text-slate-600',
     },
-    { header: 'Total', align: 'center', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
-    { header: 'Estado', cell: (f) => <StatusBadge status={f.estado === 'EMITIDA' ? 'Emitida' : 'Anulada'} /> },
+    { header: 'Total', sortKey: 'totalGeneral', align: 'center', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
+    { header: 'Estado', sortKey: 'estado', cell: (f) => <StatusBadge status={f.estado === 'EMITIDA' ? 'Emitida' : 'Anulada'} /> },
     {
       header: 'Acciones',
       align: 'center',
@@ -88,6 +121,38 @@ export const FacturasPanel: React.FC = () => {
         onRowClick={(f) => setIdSeleccionada(f.idFacturaVenta)}
         filters={
           <>
+            <div className="w-full sm:w-56">
+              <ClienteSelector value={cliente} onChange={setCliente} placeholder="Todos los clientes" />
+            </div>
+            <div className="w-full sm:w-56">
+              <EmpleadoPicker value={empleado} onChange={setEmpleado} placeholder="Todos los vendedores" />
+            </div>
+            <div className="w-full sm:w-56">
+              <DepositoBuscador
+                depositos={depositos.data ?? []}
+                value={deposito}
+                onChange={setDeposito}
+                placeholder="Todos los depósitos (buscar...)"
+              />
+            </div>
+            <input
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              type="date"
+              value={fechaDesde}
+              max={fechaHasta || undefined}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              title="Fecha de emisión desde"
+              aria-label="Fecha de emisión desde"
+            />
+            <input
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              type="date"
+              value={fechaHasta}
+              min={fechaDesde || undefined}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              title="Fecha de emisión hasta"
+              aria-label="Fecha de emisión hasta"
+            />
             <select
               className={cn(fieldClass, 'w-auto bg-white h-9')}
               value={estado}

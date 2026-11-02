@@ -7,7 +7,7 @@ import { useApp } from '../../context/AppContext';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import type { DepositoResponseDTO, ProductoResponseDTO, StockDepositoResponseDTO } from '../../types/api';
 
-type FiltrosExistencia = { depositoId?: number };
+type FiltrosExistencia = { depositoId?: number; productoId?: number };
 
 /**
  * Existencias: cuántas unidades de cada producto hay en cada depósito (10 por página). Se busca por
@@ -21,9 +21,12 @@ export const ExistenciasPanel: React.FC = () => {
   const cargarDepositos = useCallback(() => (asignado ? Promise.resolve([]) : catalogos.depositos()), [asignado]);
   const depositos = useAsyncData(cargarDepositos);
   const [filtroDeposito, setFiltroDeposito] = useState<DepositoResponseDTO | null>(null);
+  const [filtroProducto, setFiltroProducto] = useState<ProductoResponseDTO | null>(null);
   const deposito = asignado ?? filtroDeposito;
+  const filtros: FiltrosExistencia | undefined =
+    deposito || filtroProducto ? { depositoId: deposito?.id, productoId: filtroProducto?.id } : undefined;
   const existencias = usePagedResource<StockDepositoResponseDTO, FiltrosExistencia>(inventarioApi.stock.list, {
-    filters: deposito ? { depositoId: deposito.id } : undefined,
+    filters: filtros,
   });
   const baja = useRemove(existencias.reload);
   const [formOpen, setFormOpen] = useState(false);
@@ -37,7 +40,7 @@ export const ExistenciasPanel: React.FC = () => {
   const columns: Column<StockDepositoResponseDTO>[] = [
     { header: 'Producto', cell: (s) => s.nombreProducto ?? '—', className: 'font-bold text-slate-900' },
     { header: 'Depósito', cell: (s) => s.nombreDeposito ?? '—', className: 'text-slate-600' },
-    { header: 'Cantidad', align: 'right', cell: (s) => s.cantidad, className: 'font-black text-slate-900' },
+    { header: 'Cantidad', sortKey: 'cantidad', align: 'right', cell: (s) => s.cantidad, className: 'font-black text-slate-900' },
     ...(puedeEditar
       ? [
           {
@@ -82,6 +85,14 @@ export const ExistenciasPanel: React.FC = () => {
                 onChange={setFiltroDeposito}
                 disabled={Boolean(asignado)}
                 placeholder="Todos los depósitos (buscar...)"
+              />
+            </div>
+            <div className="w-full sm:w-56">
+              <ProductoPicker
+                value={filtroProducto}
+                onChange={setFiltroProducto}
+                mostrarPrecio={false}
+                placeholder="Todos los productos"
               />
             </div>
             {puedeEditar && (

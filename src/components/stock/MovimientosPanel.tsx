@@ -20,7 +20,7 @@ import { useAsyncAction, useAsyncData, useDepositoAsignado, useEmpleadoPorDefect
 import { useApp } from '../../context/AppContext';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
-import type { AjusteStockResponseDTO, DepositoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
+import type { AjusteStockResponseDTO, DepositoResponseDTO, EmpleadoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
 
 type Movimiento = 'ajuste' | 'transferencia';
 
@@ -28,24 +28,25 @@ const resumen = (detalles: { nombreProducto: string; cantidad: number }[]) =>
   detalles.map((d) => `${d.nombreProducto} ×${d.cantidad}`).join(', ');
 
 const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
-  { header: 'N.º', cell: (a) => a.id, className: 'text-slate-500 w-16' },
+  { header: 'N.º', sortKey: 'id', cell: (a) => a.id, className: 'text-slate-500 w-16' },
   { header: 'Depósito', cell: (a) => a.nombreDeposito, className: 'font-bold text-slate-900' },
   {
     header: 'Tipo',
+    sortKey: 'tipoAjuste',
     cell: (a) => <Badge variant={a.tipoAjuste === 'POSITIVO' ? 'success' : 'warning'}>{a.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'}</Badge>,
   },
-  { header: 'Motivo', cell: (a) => a.motivo, className: 'text-slate-600' },
+  { header: 'Motivo', sortKey: 'motivo', cell: (a) => a.motivo, className: 'text-slate-600' },
   { header: 'Productos', cell: (a) => resumen(a.detalles), className: 'text-slate-600 text-xs' },
   { header: 'Responsable', cell: (a) => a.nombreEmpleado, className: 'text-slate-600' },
 ];
 
 const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
-  { header: 'N.º', cell: (t) => t.id, className: 'text-slate-500 w-16' },
+  { header: 'N.º', sortKey: 'id', cell: (t) => t.id, className: 'text-slate-500 w-16' },
   { header: 'Origen', cell: (t) => t.nombreDepositoOrigen, className: 'font-bold text-slate-900' },
   { header: 'Destino', cell: (t) => t.nombreDepositoDestino, className: 'font-bold text-slate-900' },
   { header: 'Productos', cell: (t) => resumen(t.detalles), className: 'text-slate-600 text-xs' },
   { header: 'Responsable', cell: (t) => t.nombreEmpleado, className: 'text-slate-600' },
-  { header: 'Estado', cell: (t) => <StatusBadge status={t.estado === 'COMPLETADO' ? 'Completado' : t.estado} /> },
+  { header: 'Estado', sortKey: 'estado', cell: (t) => <StatusBadge status={t.estado === 'COMPLETADO' ? 'Completado' : t.estado} /> },
 ];
 
 /** Columna "Ver": abre el detalle con lo que ya trae la fila (no se vuelve a pedir). */
@@ -92,8 +93,8 @@ const DetalleMovimiento: React.FC<{
   </ModalDialog>
 );
 
-type FiltroAjustes = { depositoId?: number };
-type FiltroTransferencias = { depositoOrigenId?: number };
+type FiltroAjustes = { depositoId?: number; empleadoId?: number };
+type FiltroTransferencias = { depositoOrigenId?: number; empleadoId?: number };
 
 /** Filtro por depósito: el mismo buscador de los formularios, sobre el catálogo de depósitos. */
 const FiltroDeposito: React.FC<{ value: DepositoResponseDTO | null; onChange: (deposito: DepositoResponseDTO | null) => void; depositos: DepositoResponseDTO[] | null; titulo: string; disabled?: boolean }> = ({
@@ -113,11 +114,14 @@ export const AjustesPanel: React.FC = () => {
   const asignado = useDepositoAsignado();
   const depositos = useAsyncData(catalogos.depositos);
   const [filtroElegido, setFiltro] = useState<DepositoResponseDTO | null>(null);
+  const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
   // El depositero ve solo los ajustes de su depósito.
   const filtro = asignado ?? filtroElegido;
+  const filtros: FiltroAjustes | undefined =
+    filtro || empleado ? { depositoId: filtro?.id, empleadoId: empleado?.id } : undefined;
   const [detalle, setDetalle] = useState<AjusteStockResponseDTO | null>(null);
   const ajustes = usePagedResource<AjusteStockResponseDTO, FiltroAjustes>(inventarioApi.ajustes.list, {
-    filters: filtro ? { depositoId: filtro.id } : undefined,
+    filters: filtros,
     sort: 'fechaCreacion,desc',
   });
   const [formOpen, setFormOpen] = useState(false);
@@ -134,6 +138,9 @@ export const AjustesPanel: React.FC = () => {
         filters={
           <>
             <FiltroDeposito value={filtro} onChange={setFiltro} depositos={depositos.data} titulo="Depósito" disabled={Boolean(asignado)} />
+            <div className="w-full sm:w-56">
+              <EmpleadoPicker value={empleado} onChange={setEmpleado} placeholder="Todos los responsables" />
+            </div>
             <Button variant="primario" onClick={() => setFormOpen(true)}>
               <Plus />
               <span>Nuevo ajuste</span>
@@ -159,8 +166,11 @@ export const TransferenciasPanel: React.FC = () => {
   const [detalle, setDetalle] = useState<TransferenciaStockResponseDTO | null>(null);
   const depositos = useAsyncData(catalogos.depositos);
   const [origen, setOrigen] = useState<DepositoResponseDTO | null>(null);
+  const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
+  const filtros: FiltroTransferencias | undefined =
+    origen || empleado ? { depositoOrigenId: origen?.id, empleadoId: empleado?.id } : undefined;
   const transferencias = usePagedResource<TransferenciaStockResponseDTO, FiltroTransferencias>(inventarioApi.transferencias.list, {
-    filters: origen ? { depositoOrigenId: origen.id } : undefined,
+    filters: filtros,
     sort: 'fechaCreacion,desc',
   });
   const [formOpen, setFormOpen] = useState(false);
@@ -177,6 +187,9 @@ export const TransferenciasPanel: React.FC = () => {
         filters={
           <>
             <FiltroDeposito value={origen} onChange={setOrigen} depositos={depositos.data} titulo="Origen" />
+            <div className="w-full sm:w-56">
+              <EmpleadoPicker value={empleado} onChange={setEmpleado} placeholder="Todos los responsables" />
+            </div>
             {isAdmin && (
               <Button variant="primario" onClick={() => setFormOpen(true)}>
                 <Plus />

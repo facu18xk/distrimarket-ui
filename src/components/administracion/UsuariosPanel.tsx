@@ -27,7 +27,7 @@ export const UsuariosPanel: React.FC = () => {
   };
 
   const columns: Column<UsuarioResponseDTO>[] = [
-    { header: 'Usuario', cell: (u) => u.username, className: 'font-bold text-slate-900' },
+    { header: 'Usuario', sortKey: 'username', cell: (u) => u.username, className: 'font-bold text-slate-900' },
     { header: 'Nombre', cell: (u) => u.nombreCompleto ?? '—' },
     { header: 'Documento', cell: (u) => formatDocumentoTexto(u.documento), className: 'text-slate-600' },
     { header: 'Cargo', cell: (u) => u.cargo ?? 'No es empleado', className: 'text-slate-600 text-xs' },

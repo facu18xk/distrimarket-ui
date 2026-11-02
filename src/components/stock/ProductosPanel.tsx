@@ -28,17 +28,24 @@ async function cargarClasificaciones() {
   return { categorias, marcas };
 }
 
-type FiltrosProducto = { categoriaId?: number; marcaId?: number };
+type FiltrosProducto = { categoriaId?: number; marcaId?: number; estado?: boolean };
 
-/** Productos de a 10 por página: búsqueda por nombre o código de barras, y filtros por categoría y marca. */
+/** Productos de a 10 por página: búsqueda por nombre o código de barras, y filtros por categoría, marca y estado. */
 export const ProductosPanel: React.FC = () => {
   const { hasRole } = useApp();
   const puedeEditar = hasRole('ADMIN') || hasRole('DEPOSITERO');
   const clasificaciones = useAsyncData(cargarClasificaciones);
   const [categoriaId, setCategoriaId] = useState<number | ''>('');
   const [marcaId, setMarcaId] = useState<number | ''>('');
+  const [estado, setEstado] = useState<'' | 'activo' | 'inactivo'>('');
   const filtros: FiltrosProducto | undefined =
-    categoriaId === '' && marcaId === '' ? undefined : { categoriaId: categoriaId || undefined, marcaId: marcaId || undefined };
+    categoriaId === '' && marcaId === '' && estado === ''
+      ? undefined
+      : {
+          categoriaId: categoriaId || undefined,
+          marcaId: marcaId || undefined,
+          estado: estado === '' ? undefined : estado === 'activo',
+        };
   const productos = usePagedResource<ProductoResponseDTO, FiltrosProducto>(inventarioApi.productos.list, { filters: filtros });
   const baja = useRemove(productos.reload);
   const [formOpen, setFormOpen] = useState(false);
@@ -53,13 +60,13 @@ export const ProductosPanel: React.FC = () => {
   };
 
   const columns: Column<ProductoResponseDTO>[] = [
-    { header: 'Producto', cell: (p) => p.nombre, className: 'font-bold text-slate-900' },
+    { header: 'Producto', sortKey: 'nombre', cell: (p) => p.nombre, className: 'font-bold text-slate-900' },
     { header: 'Categoría', cell: (p) => categoriaPorId.get(p.idCategoria)?.nombre ?? '—', className: 'text-slate-600' },
     { header: 'Marca', cell: (p) => marcaPorId.get(p.idMarca)?.nombre ?? '—', className: 'text-slate-600' },
-    { header: 'Código de barras', cell: (p) => p.codigoBarra ?? '—', className: 'text-slate-500 text-xs' },
-    { header: 'Precio de venta', align: 'right', cell: (p) => formatMoney(p.precioVenta), className: 'font-black text-slate-900' },
-    { header: 'IVA', align: 'center', cell: (p) => `${p.porcentajeIva}%`, className: 'text-slate-600' },
-    { header: 'Estado', cell: (p) => <StatusBadge status={p.estado ? 'Activo' : 'Inactivo'} /> },
+    { header: 'Código de barras', sortKey: 'codigoBarra', cell: (p) => p.codigoBarra ?? '—', className: 'text-slate-500 text-xs' },
+    { header: 'Precio de venta', sortKey: 'precioVenta', align: 'right', cell: (p) => formatMoney(p.precioVenta), className: 'font-black text-slate-900' },
+    { header: 'IVA', sortKey: 'porcentajeIva', align: 'center', cell: (p) => `${p.porcentajeIva}%`, className: 'text-slate-600' },
+    { header: 'Estado', sortKey: 'estado', cell: (p) => <StatusBadge status={p.estado ? 'Activo' : 'Inactivo'} /> },
     ...(puedeEditar
       ? [
           {
@@ -111,6 +118,16 @@ export const ProductosPanel: React.FC = () => {
                   {m.nombre}
                 </option>
               ))}
+            </select>
+            <select
+              className={cn(fieldClass, filtro)}
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as '' | 'activo' | 'inactivo')}
+              title="Filtrar por estado"
+            >
+              <option value="">Todos los estados</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
             </select>
             {puedeEditar && (
               <Button variant="primario" onClick={() => abrir(null)}>

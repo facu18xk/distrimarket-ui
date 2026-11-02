@@ -20,9 +20,9 @@ export const DepositosPanel: React.FC = () => {
   };
 
   const columns: Column<DepositoResponseDTO>[] = [
-    { header: 'Depósito', cell: (d) => d.nombre, className: 'font-bold text-slate-900' },
-    { header: 'Ubicación', cell: (d) => d.ubicacion ?? '—', className: 'text-slate-600' },
-    { header: 'Estado', cell: (d) => <StatusBadge status={d.estado ? 'Activo' : 'Inactivo'} /> },
+    { header: 'Depósito', sortKey: 'nombre', cell: (d) => d.nombre, className: 'font-bold text-slate-900' },
+    { header: 'Ubicación', sortKey: 'ubicacion', cell: (d) => d.ubicacion ?? '—', className: 'text-slate-600' },
+    { header: 'Estado', sortKey: 'estado', cell: (d) => <StatusBadge status={d.estado ? 'Activo' : 'Inactivo'} /> },
     ...(isAdmin
       ? [
         {

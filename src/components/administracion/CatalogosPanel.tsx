@@ -43,7 +43,7 @@ export const MediosPagoPanel: React.FC = () => {
     );
 
   const columns: Column<MedioPagoDTO>[] = [
-    { header: 'Nombre', cell: (m) => m.nombre, className: 'font-bold text-slate-900' },
+    { header: 'Nombre', sortKey: 'nombre', cell: (m) => m.nombre, className: 'font-bold text-slate-900' },
     { header: 'Acciones', align: 'center', cell: (m) => <ActionButtons onEdit={() => abrir(m)} onDelete={() => darDeBaja(m)} /> },
   ];
 
@@ -137,11 +137,11 @@ export const TimbradosPanel: React.FC = () => {
     );
 
   const columns: Column<TimbradoDTO>[] = [
-    { header: 'Número', cell: (t) => t.numeroTimbrado, className: 'font-bold text-slate-900' },
-    { header: 'Sucursal', cell: (t) => t.sucursal ?? '—', className: 'text-slate-600' },
-    { header: 'Punto de expedición', cell: (t) => t.puntoExpedicion ?? '—', className: 'text-slate-600' },
-    { header: 'Vigente desde', cell: (t) => formatDate(t.fechaInicio), className: 'text-slate-600' },
-    { header: 'Vence', cell: (t) => formatDate(t.fechaVencimiento), className: 'text-slate-600' },
+    { header: 'Número', sortKey: 'numeroTimbrado', cell: (t) => t.numeroTimbrado, className: 'font-bold text-slate-900' },
+    { header: 'Sucursal', sortKey: 'sucursal', cell: (t) => t.sucursal ?? '—', className: 'text-slate-600' },
+    { header: 'Punto de expedición', sortKey: 'puntoExpedicion', cell: (t) => t.puntoExpedicion ?? '—', className: 'text-slate-600' },
+    { header: 'Vigente desde', sortKey: 'fechaInicio', cell: (t) => formatDate(t.fechaInicio), className: 'text-slate-600' },
+    { header: 'Vence', sortKey: 'fechaVencimiento', cell: (t) => formatDate(t.fechaVencimiento), className: 'text-slate-600' },
     { header: 'Acciones', align: 'center', cell: (t) => <ActionButtons onEdit={() => abrir(t)} onDelete={() => darDeBaja(t)} /> },
   ];
 

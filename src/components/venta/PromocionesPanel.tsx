@@ -31,12 +31,12 @@ export const PromocionesPanel: React.FC = () => {
   };
 
   const columns: Column<PromocionResponseDTO>[] = [
-    { header: 'Promoción', cell: (p) => p.titulo, className: 'font-bold text-slate-900' },
-    { header: 'Descuento', align: 'center', cell: (p) => (p.porcentajeDescuento != null ? `${Number(p.porcentajeDescuento)}%` : '—') },
-    { header: 'Vigencia', cell: vigencia, className: 'text-slate-600' },
+    { header: 'Promoción', sortKey: 'titulo', cell: (p) => p.titulo, className: 'font-bold text-slate-900' },
+    { header: 'Descuento', sortKey: 'porcentajeDescuento', align: 'center', cell: (p) => (p.porcentajeDescuento != null ? `${Number(p.porcentajeDescuento)}%` : '—') },
+    { header: 'Vigencia', sortKey: 'fechaInicio', cell: vigencia, className: 'text-slate-600' },
     { header: 'Productos', align: 'center', cell: (p) => (p.idsProducto.length ? p.idsProducto.length : 'Todos') },
     { header: 'Correos', align: 'center', cell: (p) => p.correosEnviados ?? 0, className: 'text-slate-600' },
-    { header: 'Estado', cell: (p) => <StatusBadge status={estado(p)} /> },
+    { header: 'Estado', sortKey: 'enviado', cell: (p) => <StatusBadge status={estado(p)} /> },
     {
       header: 'Acciones',
       align: 'center',

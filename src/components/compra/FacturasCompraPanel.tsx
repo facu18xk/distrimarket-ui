@@ -16,11 +16,12 @@ import {
   type Column,
 } from '../common';
 import { Button } from '../ui/button';
-import { useAsyncAction, useAsyncData, useConfirm, useDepositoAsignado, usePagedResource, useRemove } from '../../hooks';
-import { comprasApi } from '../../services';
+import { useAsyncAction, useAsyncData, useConfirm, useDebounce, useDepositoAsignado, usePagedResource, useRemove } from '../../hooks';
+import { comprasApi, type FacturaCompraFilters } from '../../services';
 import { formatDate, formatMoney, todayIso } from '../../lib/format';
 import { newLineItem, type LineItem } from '../../lib/lineItems';
 import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, padNumeroFactura } from '../../lib/paraguay';
+import { cn } from '../../lib/utils';
 import type { CondicionCompra, DepositoResponseDTO, FacturaCompraResponseDTO, ProductoResponseDTO, ProveedorResponseDTO } from '../../types/api';
 import { cargarCatalogosCompra } from './catalogos';
 import { nombreProveedor } from '../../lib/proveedor';
@@ -29,8 +30,28 @@ import { ProductoFormModal } from '../stock';
 
 const anulada = (f: FacturaCompraResponseDTO) => f.estado?.toUpperCase().startsWith('ANULAD');
 
+type EstadoFacturaCompra = 'ACTIVA' | 'ANULADA';
+
 export const FacturasCompraPanel: React.FC = () => {
-  const facturas = usePagedResource(comprasApi.facturas.list);
+  const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
+  const [estado, setEstado] = useState<EstadoFacturaCompra | ''>('');
+  const [numeroFactura, setNumeroFactura] = useState('');
+  const numeroFacturaDebounced = useDebounce(numeroFactura, 350);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const filtros: FacturaCompraFilters | undefined =
+    proveedor || estado || numeroFacturaDebounced.trim() || desde || hasta
+      ? {
+          proveedorId: proveedor?.idProveedor,
+          estado: estado || undefined,
+          numeroFactura: numeroFacturaDebounced.trim() || undefined,
+          desde: desde || undefined,
+          hasta: hasta || undefined,
+        }
+      : undefined;
+  const facturas = usePagedResource<FacturaCompraResponseDTO, FacturaCompraFilters>(comprasApi.facturas.list, {
+    filters: filtros,
+  });
   const baja = useRemove(facturas.reload);
   const anular = useAsyncAction();
   const confirm = useConfirm();
@@ -48,12 +69,12 @@ export const FacturasCompraPanel: React.FC = () => {
   };
 
   const columns: Column<FacturaCompraResponseDTO>[] = [
-    { header: 'Número', cell: (f) => (f.numeroFactura ? formatNumeroFactura(f.numeroFactura) : '—'), className: 'font-bold text-slate-900' },
-    { header: 'Fecha', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
+    { header: 'Número', sortKey: 'numeroFactura', cell: (f) => (f.numeroFactura ? formatNumeroFactura(f.numeroFactura) : '—'), className: 'font-bold text-slate-900' },
+    { header: 'Fecha', sortKey: 'fechaEmision', cell: (f) => formatDate(f.fechaEmision), className: 'text-slate-600' },
     { header: 'Proveedor', cell: (f) => nombreProveedor(f.proveedor) },
-    { header: 'Condición', cell: (f) => (f.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'), className: 'text-slate-600' },
-    { header: 'Total', align: 'center', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
-    { header: 'Estado', cell: (f) => <StatusBadge status={anulada(f) ? 'Anulada' : 'Activa'} /> },
+    { header: 'Condición', sortKey: 'condicionCompra', cell: (f) => (f.condicionCompra === 'CREDITO' ? 'Crédito' : 'Contado'), className: 'text-slate-600' },
+    { header: 'Total', sortKey: 'totalGeneral', align: 'center', cell: (f) => formatMoney(f.totalGeneral), className: 'font-black text-slate-900' },
+    { header: 'Estado', sortKey: 'estado', cell: (f) => <StatusBadge status={anulada(f) ? 'Anulada' : 'Activa'} /> },
     {
       header: 'Acciones',
       align: 'center',
@@ -98,10 +119,53 @@ export const FacturasCompraPanel: React.FC = () => {
         searchPlaceholder="Buscar por número o proveedor..."
         onRowClick={setDetalle}
         filters={
-          <Button variant="primario" onClick={() => setFormOpen(true)}>
-            <Plus />
-            <span>Nueva factura de compra</span>
-          </Button>
+          <>
+            <div className="w-full sm:w-56">
+              <ProveedorPicker value={proveedor} onChange={setProveedor} placeholder="Todos los proveedores" />
+            </div>
+            <select
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              value={estado}
+              onChange={(e) => setEstado(e.target.value as EstadoFacturaCompra | '')}
+              title="Filtrar por estado"
+              aria-label="Filtrar por estado"
+            >
+              <option value="">Todos los estados</option>
+              <option value="ACTIVA">Activas</option>
+              <option value="ANULADA">Anuladas</option>
+            </select>
+            <input
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              value={numeroFactura}
+              onChange={(e) => setNumeroFactura(e.target.value)}
+              placeholder="N.º de factura"
+              maxLength={50}
+              title="Filtrar por número de factura"
+              aria-label="Filtrar por número de factura"
+            />
+            <input
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              type="date"
+              value={desde}
+              max={hasta || undefined}
+              onChange={(e) => setDesde(e.target.value)}
+              title="Fecha de emisión desde"
+              aria-label="Fecha de emisión desde"
+            />
+            <input
+              className={cn(fieldClass, 'w-auto bg-white h-9')}
+              type="date"
+              value={hasta}
+              min={desde || undefined}
+              onChange={(e) => setHasta(e.target.value)}
+              title="Fecha de emisión hasta"
+              aria-label="Fecha de emisión hasta"
+            />
+            <Button variant="primario" onClick={() => setFormOpen(true)}>
+              <Plus />
+              <span>Nueva factura de compra</span>
+            </Button>
+          </>
         }
       />
 

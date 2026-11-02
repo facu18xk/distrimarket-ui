@@ -31,14 +31,15 @@ export const SoportePanel: React.FC = () => {
   };
 
   const columns: Column<ContactoMensajeResponseDTO>[] = [
-    { header: 'Fecha', cell: (m) => formatDate(m.fechaEnvio), className: 'text-slate-500 text-xs' },
-    { header: 'De', cell: (m) => `${m.nombre} <${m.correo}>`, className: 'font-semibold text-slate-900' },
-    { header: 'Asunto', cell: (m) => m.asunto },
+    { header: 'Fecha', sortKey: 'fechaCreacion', cell: (m) => formatDate(m.fechaEnvio), className: 'text-slate-500 text-xs' },
+    { header: 'De', sortKey: 'nombreRemitente', cell: (m) => `${m.nombre} <${m.correo}>`, className: 'font-semibold text-slate-900' },
+    { header: 'Asunto', sortKey: 'asunto', cell: (m) => m.asunto },
     {
       header: 'Correo a soporte',
+      sortKey: 'correoEnviado',
       cell: (m) => (m.correoEnviado ? <StatusBadge status="Enviado" /> : m.errorCorreo ? <span className="text-rose-600 text-xs">Error, reintentando</span> : <span className="text-slate-400 text-xs">En cola</span>),
     },
-    { header: 'Estado', cell: (m) => <StatusBadge status={m.atendido ? 'Atendido' : 'Pendiente'} /> },
+    { header: 'Estado', sortKey: 'atendido', cell: (m) => <StatusBadge status={m.atendido ? 'Atendido' : 'Pendiente'} /> },
   ];
 
   return (

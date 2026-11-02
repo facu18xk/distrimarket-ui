@@ -28,9 +28,9 @@ export const ClientesPanel: React.FC = () => {
     );
 
   const columns: Column<ClienteResponseDTO>[] = [
-    { header: 'Nombre', cell: (c) => c.persona.nombreCompleto, className: 'font-bold text-slate-900' },
-    { header: 'Tipo', cell: (c) => (c.persona.tipoPersona === 'FISICA' ? 'Física' : 'Jurídica'), className: 'text-slate-600' },
-    { header: 'CI / RUC', cell: (c) => formatDocumento(c.persona.ci, c.persona.ruc), className: 'text-slate-600' },
+    { header: 'Nombre', sortKey: 'persona.nombreCompleto', cell: (c) => c.persona.nombreCompleto, className: 'font-bold text-slate-900' },
+    { header: 'Tipo', sortKey: 'persona.tipoPersona', cell: (c) => (c.persona.tipoPersona === 'FISICA' ? 'Física' : 'Jurídica'), className: 'text-slate-600' },
+    { header: 'CI / RUC', sortKey: 'persona.ci', cell: (c) => formatDocumento(c.persona.ci, c.persona.ruc), className: 'text-slate-600' },
     { header: 'Teléfono', cell: (c) => formatPhone(c.persona.telefono) || '—', className: 'text-slate-600' },
     { header: 'Correo', cell: (c) => c.persona.correo ?? '—', className: 'text-slate-500 text-xs' },
     { header: 'Dirección', cell: (c) => c.persona.direccion ?? '—', className: 'text-slate-600' },

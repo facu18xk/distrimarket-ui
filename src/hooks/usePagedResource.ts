@@ -12,6 +12,9 @@ export interface PagedResource<T> {
   error: string | null;
   search: string;
   setSearch: (value: string) => void;
+  /** Orden vigente ("propiedad,dirección"), o el que se haya indicado como predeterminado. */
+  sort: string | undefined;
+  setSort: (sort: string | undefined) => void;
   setPage: (page: number) => void;
   /** Vuelve a pedir la página actual (después de crear o borrar: cambian el orden y el total). */
   reload: () => void;
@@ -44,16 +47,17 @@ interface Settled<T> {
  */
 export function usePagedResource<T, F = undefined>(
   fetcher: (query: PageQuery, filters?: F) => Promise<PageResult<T>>,
-  { pageSize = DEFAULT_PAGE_SIZE, sort, filters, enabled = true }: Options<F> = {}
+  { pageSize = DEFAULT_PAGE_SIZE, sort: defaultSort, filters, enabled = true }: Options<F> = {}
 ): PagedResource<T> {
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<string | undefined>(defaultSort);
   const [version, setVersion] = useState(0);
   const debouncedSearch = useDebounce(search, 350);
   const filtersKey = JSON.stringify(filters ?? null);
 
-  // La página elegida vale solo para la búsqueda y los filtros con los que se eligió:
-  // al cambiar cualquiera de los dos, se vuelve sola a la primera.
-  const scope = `${debouncedSearch}|${filtersKey}`;
+  // La página elegida vale solo para la búsqueda, los filtros y el orden con los que se eligió:
+  // al cambiar cualquiera de los tres, se vuelve sola a la primera.
+  const scope = `${debouncedSearch}|${filtersKey}|${sort ?? ''}`;
   const [pageChoice, setPageChoice] = useState({ scope, page: 1 });
   const page = pageChoice.scope === scope ? pageChoice.page : 1;
 
@@ -98,6 +102,8 @@ export function usePagedResource<T, F = undefined>(
     error: current ? settled.error : null,
     search,
     setSearch,
+    sort,
+    setSort,
     setPage,
     reload,
     replaceItem,
