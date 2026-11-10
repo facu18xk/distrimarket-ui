@@ -21,6 +21,7 @@ import { useApp } from '../../context/AppContext';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
 import type { AjusteStockResponseDTO, DepositoResponseDTO, EmpleadoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
+import {formatCodigo} from "@/lib/format.ts";
 
 type Movimiento = 'ajuste' | 'transferencia';
 
@@ -32,7 +33,7 @@ const resumen = (detalles: { idProducto?: number; nombreProducto: string; cantid
 };
 
 const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
-  { header: 'N.º', sortKey: 'id', cell: (a) => a.id, className: 'text-slate-500 w-16' },
+  { header: 'Código', sortKey: 'id', cell: (a) => formatCodigo('AJU', a.id), className: 'text-slate-500 w-16' },
   { header: 'Depósito', cell: (a) => a.nombreDeposito, className: 'font-bold text-slate-900' },
   {
     header: 'Tipo',
@@ -45,7 +46,7 @@ const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
 ];
 
 const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
-  { header: 'N.º', sortKey: 'id', cell: (t) => t.id, className: 'text-slate-500 w-16' },
+  { header: 'Código', sortKey: 'id', cell: (t) => formatCodigo('TRA', t.id), className: 'text-slate-500 w-16' },
   { header: 'Origen', cell: (t) => t.nombreDepositoOrigen, className: 'font-bold text-slate-900' },
   { header: 'Destino', cell: (t) => t.nombreDepositoDestino, className: 'font-bold text-slate-900' },
   { header: 'Productos', align: 'center', cell: (t) => resumen(t.detalles), className: 'text-slate-600 text-xs whitespace-nowrap' },
@@ -140,7 +141,7 @@ export const AjustesPanel: React.FC = () => {
         columns={[...columnasAjustes, columnaVer(setDetalle)]}
         rowKey={(a) => a.id}
         label="ajustes"
-        searchPlaceholder="Buscar por depósito, motivo o responsable..."
+        searchPlaceholder="Buscar por código, depósito, motivo o responsable..."
         onRowClick={setDetalle}
         filters={
           <>
@@ -194,7 +195,7 @@ export const TransferenciasPanel: React.FC = () => {
         columns={[...columnasTransferencias, columnaVer(setDetalle)]}
         rowKey={(t) => t.id}
         label="transferencias"
-        searchPlaceholder="Buscar por depósito o responsable..."
+        searchPlaceholder="Buscar por código, depósito o responsable..."
         onRowClick={setDetalle}
         filters={
           <>
