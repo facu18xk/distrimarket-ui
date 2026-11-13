@@ -19,7 +19,7 @@ export const ROLES: Record<Role, RoleInfo> = {
   ADMIN: {
     label: 'Administrador',
     description: 'Acceso total, usuarios y catálogos',
-    modules: ['venta', 'stock', 'compra', 'administracion'],
+    modules: ['compra', 'stock', 'venta', 'administracion'],
   },
   VENDEDOR: {
     label: 'Vendedor',
@@ -48,7 +48,7 @@ export const MODULE_LABELS: Record<MainModule, string> = {
 };
 
 /** Orden fijo del menú. */
-const MODULE_ORDER: MainModule[] = ['venta', 'stock', 'compra', 'administracion'];
+const MODULE_ORDER: MainModule[] = ['compra', 'stock', 'venta', 'administracion'];
 
 /** Módulos que ve un usuario: la unión de los de todos sus roles. */
 export function modulesFor(roles: Role[]): MainModule[] {
@@ -61,6 +61,8 @@ export function canAccess(roles: Role[], module: MainModule): boolean {
 
 /** Primer módulo que el usuario puede ver; es su pantalla de inicio. */
 export function homeModule(roles: Role[]): MainModule {
+  // El administrador entra a Administración (configuración); el resto, a su primer módulo.
+  if (roles.includes('ADMIN')) return 'administracion';
   return modulesFor(roles)[0] ?? 'venta';
 }
 

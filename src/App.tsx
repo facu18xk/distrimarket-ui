@@ -25,6 +25,7 @@ const MainLayout: React.FC = () => {
     canAccess,
     goHome,
     logout,
+    irAlLogin,
     navigate,
     serverError,
     retryAfterServerError,
@@ -36,6 +37,14 @@ const MainLayout: React.FC = () => {
       return (
         <div className="min-h-screen flex flex-col bg-slate-100">
           <UnauthorizedPage onLogin={() => navigate(LOGIN_PATH)} />
+        </div>
+      );
+    }
+    // Pantalla protegida sin sesión: 401 (falta autenticarse), no 403 (falta permiso).
+    if (route.kind === 'forbidden' && route.module) {
+      return (
+        <div className="min-h-screen flex flex-col bg-slate-100">
+          <UnauthorizedPage detail="Inicie sesión para ingresar a esta pantalla." onLogin={irAlLogin} />
         </div>
       );
     }

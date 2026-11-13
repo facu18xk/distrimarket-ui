@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { MainModule, VentaSubTab, StockSubTab, CompraSubTab, AdminSubTab, UserProfile, ThemeConfig, ContactMessage } from '../types/distrimarket';
 import type { RolUsuario, UsuarioResponseDTO } from '../types/api';
 import { THEME_PALETTES } from '../lib/theme';
@@ -21,6 +21,8 @@ interface AppContextType {
   user: UserProfile;
   login: (username: string, password: string) => Promise<LoginResult>;
   logout: () => void;
+  /** Sin sesión, en una pantalla protegida: va al login y, al entrar, vuelve a esa pantalla. */
+  irAlLogin: () => void;
   /** Aviso para la pantalla de login (por ejemplo, sesión vencida). */
   loginNotice: string | null;
   updateAvatar: (avatarUrl: string) => void;
@@ -142,7 +144,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const activeModule = 'module' in route && route.module ? route.module : homeModule(user.roles);
   // La barra de direcciones muestra siempre lo que se ve: /login sin sesión (salvo pantallas de error público
   // como /401 o /403) y, con sesión, el módulo real.
-  const isPublicError = path === '/401' || path === '/403' || path === '/unauthorized' || path === '/forbidden';
+  // Sin sesión, una pantalla protegida (por ejemplo /venta) muestra la 401 en su propia URL.
+  const pantallaProtegidaSinSesion = !isLoggedIn && route.kind === 'forbidden' && route.module !== undefined;
+  const isPublicError =
+    path === '/401' || path === '/403' || path === '/unauthorized' || path === '/forbidden' || pantallaProtegidaSinSesion;
   const urlVisible = !isLoggedIn ? (isPublicError ? path : LOGIN_PATH) : route.kind === 'redirect' ? route.to : path;
   useEffect(() => {
     if (window.location.pathname !== urlVisible) window.history.replaceState(null, '', urlVisible);
@@ -252,6 +257,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const goHome = () => navigate(MODULE_PATHS[homeModule(user.roles)]);
 
+  // Pantalla protegida que se pidió sin sesión: después del login se vuelve a ella.
+  const destinoTrasLogin = useRef<string | null>(null);
+  const irAlLogin = () => {
+    destinoTrasLogin.current = path;
+    navigate(LOGIN_PATH);
+  };
+
   const login = async (username: string, password: string): Promise<LoginResult> => {
     try {
       const token = await authApi.login({ username: username.trim(), password });
@@ -260,6 +272,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoginNotice(null);
       setServerError(null);
       setAvatarUrl(readAvatar(nueva.username));
+      if (destinoTrasLogin.current) {
+        navigate(destinoTrasLogin.current);
+        destinoTrasLogin.current = null;
+      }
       // La ruta que se había pedido antes del login se respeta si el rol la permite (resolveRoute).
       // El perfil (/auth/me) lo pide el efecto que observa la sesión.
       setProfile(null);
@@ -296,6 +312,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         user,
         login,
         logout,
+        irAlLogin,
         loginNotice,
         updateAvatar,
         canAccess,
