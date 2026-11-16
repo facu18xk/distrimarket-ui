@@ -21,7 +21,7 @@ import { useApp } from '../../context/AppContext';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
 import type { AjusteStockResponseDTO, DepositoResponseDTO, EmpleadoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
-import {formatCodigo} from "@/lib/format.ts";
+import {formatCodigo, formatDate} from "@/lib/format.ts";
 
 type Movimiento = 'ajuste' | 'transferencia';
 
@@ -34,6 +34,7 @@ const resumen = (detalles: { idProducto?: number; nombreProducto: string; cantid
 
 const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
   { header: 'Código', sortKey: 'id', cell: (a) => formatCodigo('AJU', a.id), className: 'text-slate-500 w-16' },
+  { header: 'Fecha', sortKey: 'fechaCreacion', cell: (a) => (a.fechaCreacion ? formatDate(a.fechaCreacion) : '—'), className: 'text-slate-600 whitespace-nowrap' },
   { header: 'Depósito', cell: (a) => a.nombreDeposito, className: 'font-bold text-slate-900' },
   {
     header: 'Tipo',
@@ -47,6 +48,7 @@ const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
 
 const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
   { header: 'Código', sortKey: 'id', cell: (t) => formatCodigo('TRA', t.id), className: 'text-slate-500 w-16' },
+  { header: 'Fecha', sortKey: 'fechaCreacion', cell: (t) => (t.fechaCreacion ? formatDate(t.fechaCreacion) : '—'), className: 'text-slate-600 whitespace-nowrap' },
   { header: 'Origen', cell: (t) => t.nombreDepositoOrigen, className: 'font-bold text-slate-900' },
   { header: 'Destino', cell: (t) => t.nombreDepositoDestino, className: 'font-bold text-slate-900' },
   { header: 'Productos', align: 'center', cell: (t) => resumen(t.detalles), className: 'text-slate-600 text-xs whitespace-nowrap' },
@@ -161,8 +163,8 @@ export const AjustesPanel: React.FC = () => {
       <MovimientoFormModal tipo="ajuste" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={ajustes.reload} />
       <DetalleMovimiento
         movimiento={detalle}
-        titulo={detalle ? `Ajuste N.º ${detalle.id}` : ''}
-        datos={detalle ? [['Depósito', detalle.nombreDeposito], ['Tipo', detalle.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'], ['Motivo', detalle.motivo], ['Responsable', detalle.nombreEmpleado]] : []}
+        titulo={detalle ? `Ajuste ${formatCodigo('AJU',detalle.id)}` : ''}
+        datos={detalle ? [['Depósito', detalle.nombreDeposito], ['Tipo', detalle.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'], ['Motivo', detalle.motivo], ['Responsable', detalle.nombreEmpleado], ['Fecha', detalle.fechaCreacion ? formatDate(detalle.fechaCreacion) : '—']] : []}
         onClose={() => setDetalle(null)}
       />
     </>
@@ -217,8 +219,8 @@ export const TransferenciasPanel: React.FC = () => {
       <MovimientoFormModal tipo="transferencia" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={transferencias.reload} />
       <DetalleMovimiento
         movimiento={detalle}
-        titulo={detalle ? `Transferencia N.º ${detalle.id}` : ''}
-        datos={detalle ? [['Origen', detalle.nombreDepositoOrigen], ['Destino', detalle.nombreDepositoDestino], ['Observación', detalle.observacion ?? '—'], ['Responsable', detalle.nombreEmpleado]] : []}
+        titulo={detalle ? `Transferencia ${formatCodigo('TRA', detalle.id)}` : ''}
+        datos={detalle ? [['Origen', detalle.nombreDepositoOrigen], ['Destino', detalle.nombreDepositoDestino], ['Observación', detalle.observacion ?? '—'], ['Responsable', detalle.nombreEmpleado], ['Fecha', detalle.fechaCreacion ? formatDate(detalle.fechaCreacion) : '—']] : []}
         onClose={() => setDetalle(null)}
       />
     </>
