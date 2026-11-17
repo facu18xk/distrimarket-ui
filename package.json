@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:ui1": "cross-env VITE_API_GATEWAY_URL=http://localhost:8080 VITE_UI_NODE=UI-1 vite build --outDir dist-ui1",
+    "build:ui2": "cross-env VITE_API_GATEWAY_URL=http://localhost:8080 VITE_UI_NODE=UI-2 vite build --outDir dist-ui2",
+    "build:nodes": "npm run build:ui1 && npm run build:ui2"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -29,6 +32,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "cross-env": "^10.1.0",
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.6",
