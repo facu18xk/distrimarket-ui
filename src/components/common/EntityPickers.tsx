@@ -95,7 +95,10 @@ export const EmpleadoPicker: FC<PickerProps<EmpleadoResponseDTO>> = (props) => (
 );
 
 /** Proveedores: con búsqueda y, si se pasa onCrearNuevo, "Crear proveedor nuevo" al fondo (como en clientes). */
-export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO> & { onCrearNuevo?: () => void }> = ({ onCrearNuevo, ...props }) => (
+export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO> & {
+  onCrearNuevo?: () => void;
+  permitirInactivos?: boolean;
+}> = ({ onCrearNuevo, permitirInactivos, ...props }) => (
   <RemotePicker
     {...props}
     pie={onCrearNuevo ? <PieCrearNuevo texto="Crear proveedor nuevo" icono={<UserPlus className="w-3.5 h-3.5" />} onClick={onCrearNuevo} /> : props.pie}
@@ -104,7 +107,7 @@ export const ProveedorPicker: FC<PickerProps<ProveedorResponseDTO> & { onCrearNu
     clave={(p) => p.idProveedor}
     etiqueta={(p) => nombreProveedor(p)}
     detalle={(p) => formatRuc(p.persona.ruc)}
-    deshabilitado={(p) => !p.estado}
+    deshabilitado={(p) => !permitirInactivos && !p.estado}
     placeholder={props.placeholder ?? 'Seleccionar proveedor...'}
   />
 );
