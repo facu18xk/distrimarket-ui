@@ -4,6 +4,7 @@ import { COMPRA_SUBTABS } from '../../routing/navigation';
 import { useApp } from '../../context/AppContext';
 import { FacturasCompraPanel } from './FacturasCompraPanel';
 import { ProveedoresPanel } from './ProveedoresPanel';
+import { ReportesComprasPanel } from './ReportesComprasPanel';
 
 /** Módulo de compras: todo sale del microservicio de compras a través del gateway. */
 export const CompraModuleView: React.FC = () => {
@@ -14,6 +15,7 @@ export const CompraModuleView: React.FC = () => {
       <SubTabs tabs={COMPRA_SUBTABS} value={compraSubTab} onChange={setCompraSubTab} />
       {compraSubTab === 'facturas' && <FacturasCompraPanel />}
       {compraSubTab === 'proveedores' && <ProveedoresPanel />}
+      {compraSubTab === 'reportes' && <ReportesComprasPanel />}
     </div>
   );
 };

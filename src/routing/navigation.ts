@@ -44,6 +44,7 @@ export const STOCK_SUBTABS: SubSectionItem<StockSubTab>[] = [
 export const COMPRA_SUBTABS: SubSectionItem<CompraSubTab>[] = [
   { id: 'facturas', label: 'Facturas de compra', icon: Receipt },
   { id: 'proveedores', label: 'Proveedores', icon: Truck },
+  { id: 'reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
 export const ADMIN_SUBTABS: SubSectionItem<AdminSubTab>[] = [
