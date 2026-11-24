@@ -16,8 +16,10 @@ type FiltrosEmpleado = { cargo?: string; estado?: boolean };
  */
 export const EmpleadosPanel: React.FC = () => {
   const [cargo, setCargo] = useState('');
+  void [setCargo]; // los usan los filtros comentados
   const cargoDebounced = useDebounce(cargo, 350);
   const [estado, setEstado] = useState<'' | 'activo' | 'inactivo'>('');
+  void [setEstado]; // los usan los filtros comentados
   const filtros: FiltrosEmpleado | undefined =
     cargoDebounced.trim() || estado
       ? { cargo: cargoDebounced.trim() || undefined, estado: estado === '' ? undefined : estado === 'activo' }
@@ -46,6 +48,7 @@ export const EmpleadosPanel: React.FC = () => {
         onRowClick={setEnEdicion}
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <input
               className={cn(fieldClass, 'w-auto bg-white h-9')}
               value={cargo}
@@ -64,6 +67,7 @@ export const EmpleadosPanel: React.FC = () => {
               <option value="activo">Activos</option>
               <option value="inactivo">Inactivos</option>
             </select>
+            */}
           </>
         }
       />
@@ -150,3 +154,7 @@ const EmpleadoForm: React.FC<{ empleado: EmpleadoResponseDTO; onClose: () => voi
     </form>
   );
 };
+
+
+// Los filtros de la tabla están comentados: estas referencias evitan errores de "sin usar" hasta descomentarlos.
+void [cn];

@@ -21,14 +21,20 @@ import { useApp } from '../../context/AppContext';
 import { catalogos, depositosActivos, inventarioApi } from '../../services';
 import { lineasADetalle, newLineItem, type LineItem } from '../../lib/lineItems';
 import type { AjusteStockResponseDTO, DepositoResponseDTO, EmpleadoResponseDTO, TipoAjuste, TransferenciaStockResponseDTO } from '../../types/api';
+import {formatCodigo, formatDate} from "@/lib/format.ts";
 
 type Movimiento = 'ajuste' | 'transferencia';
 
-const resumen = (detalles: { nombreProducto: string; cantidad: number }[]) =>
-  detalles.map((d) => `${d.nombreProducto} ×${d.cantidad}`).join(', ');
+/** Columna "Productos": cuántos productos distintos y cuántas unidades (el detalle se ve en la fila). */
+const resumen = (detalles: { idProducto?: number; nombreProducto: string; cantidad: number }[]) => {
+  const distintos = new Set(detalles.map((d) => d.idProducto ?? d.nombreProducto)).size;
+  const unidades = detalles.reduce((total, d) => total + d.cantidad, 0);
+  return `${distintos} ${distintos === 1 ? 'producto' : 'productos'} · ${unidades} u.`;
+};
 
 const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
-  { header: 'N.º', sortKey: 'id', cell: (a) => a.id, className: 'text-slate-500 w-16' },
+  { header: 'Código', sortKey: 'id', cell: (a) => formatCodigo('AJU', a.id), className: 'text-slate-500 w-16' },
+  { header: 'Fecha', sortKey: 'fechaCreacion', cell: (a) => (a.fechaCreacion ? formatDate(a.fechaCreacion) : '—'), className: 'text-slate-600 whitespace-nowrap' },
   { header: 'Depósito', cell: (a) => a.nombreDeposito, className: 'font-bold text-slate-900' },
   {
     header: 'Tipo',
@@ -36,15 +42,16 @@ const columnasAjustes: Column<AjusteStockResponseDTO>[] = [
     cell: (a) => <Badge variant={a.tipoAjuste === 'POSITIVO' ? 'success' : 'warning'}>{a.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'}</Badge>,
   },
   { header: 'Motivo', sortKey: 'motivo', cell: (a) => a.motivo, className: 'text-slate-600' },
-  { header: 'Productos', cell: (a) => resumen(a.detalles), className: 'text-slate-600 text-xs' },
+  { header: 'Productos', align: 'center', cell: (a) => resumen(a.detalles), className: 'text-slate-600 text-xs whitespace-nowrap' },
   { header: 'Responsable', cell: (a) => a.nombreEmpleado, className: 'text-slate-600' },
 ];
 
 const columnasTransferencias: Column<TransferenciaStockResponseDTO>[] = [
-  { header: 'N.º', sortKey: 'id', cell: (t) => t.id, className: 'text-slate-500 w-16' },
+  { header: 'Código', sortKey: 'id', cell: (t) => formatCodigo('TRA', t.id), className: 'text-slate-500 w-16' },
+  { header: 'Fecha', sortKey: 'fechaCreacion', cell: (t) => (t.fechaCreacion ? formatDate(t.fechaCreacion) : '—'), className: 'text-slate-600 whitespace-nowrap' },
   { header: 'Origen', cell: (t) => t.nombreDepositoOrigen, className: 'font-bold text-slate-900' },
   { header: 'Destino', cell: (t) => t.nombreDepositoDestino, className: 'font-bold text-slate-900' },
-  { header: 'Productos', cell: (t) => resumen(t.detalles), className: 'text-slate-600 text-xs' },
+  { header: 'Productos', align: 'center', cell: (t) => resumen(t.detalles), className: 'text-slate-600 text-xs whitespace-nowrap' },
   { header: 'Responsable', cell: (t) => t.nombreEmpleado, className: 'text-slate-600' },
   { header: 'Estado', sortKey: 'estado', cell: (t) => <StatusBadge status={t.estado === 'COMPLETADO' ? 'Completado' : t.estado} /> },
 ];
@@ -113,8 +120,11 @@ const FiltroDeposito: React.FC<{ value: DepositoResponseDTO | null; onChange: (d
 export const AjustesPanel: React.FC = () => {
   const asignado = useDepositoAsignado();
   const depositos = useAsyncData(catalogos.depositos);
+  void [depositos]; // los usan los filtros comentados
   const [filtroElegido, setFiltro] = useState<DepositoResponseDTO | null>(null);
+  void [setFiltro]; // los usan los filtros comentados
   const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
+  void [setEmpleado]; // los usan los filtros comentados
   // El depositero ve solo los ajustes de su depósito.
   const filtro = asignado ?? filtroElegido;
   const filtros: FiltroAjustes | undefined =
@@ -133,14 +143,16 @@ export const AjustesPanel: React.FC = () => {
         columns={[...columnasAjustes, columnaVer(setDetalle)]}
         rowKey={(a) => a.id}
         label="ajustes"
-        searchPlaceholder="Buscar por depósito, motivo o responsable..."
+        searchPlaceholder="Buscar por código, depósito, motivo o responsable..."
         onRowClick={setDetalle}
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <FiltroDeposito value={filtro} onChange={setFiltro} depositos={depositos.data} titulo="Depósito" disabled={Boolean(asignado)} />
             <div className="w-full sm:w-56">
               <EmpleadoPicker value={empleado} onChange={setEmpleado} placeholder="Todos los responsables" />
             </div>
+            */}
             <Button variant="primario" onClick={() => setFormOpen(true)}>
               <Plus />
               <span>Nuevo ajuste</span>
@@ -151,8 +163,8 @@ export const AjustesPanel: React.FC = () => {
       <MovimientoFormModal tipo="ajuste" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={ajustes.reload} />
       <DetalleMovimiento
         movimiento={detalle}
-        titulo={detalle ? `Ajuste N.º ${detalle.id}` : ''}
-        datos={detalle ? [['Depósito', detalle.nombreDeposito], ['Tipo', detalle.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'], ['Motivo', detalle.motivo], ['Responsable', detalle.nombreEmpleado]] : []}
+        titulo={detalle ? `Ajuste ${formatCodigo('AJU',detalle.id)}` : ''}
+        datos={detalle ? [['Depósito', detalle.nombreDeposito], ['Tipo', detalle.tipoAjuste === 'POSITIVO' ? 'Entrada' : 'Salida'], ['Motivo', detalle.motivo], ['Responsable', detalle.nombreEmpleado], ['Fecha', detalle.fechaCreacion ? formatDate(detalle.fechaCreacion) : '—']] : []}
         onClose={() => setDetalle(null)}
       />
     </>
@@ -165,8 +177,11 @@ export const TransferenciasPanel: React.FC = () => {
   const { isAdmin } = useApp();
   const [detalle, setDetalle] = useState<TransferenciaStockResponseDTO | null>(null);
   const depositos = useAsyncData(catalogos.depositos);
+  void [depositos]; // los usan los filtros comentados
   const [origen, setOrigen] = useState<DepositoResponseDTO | null>(null);
+  void [setOrigen]; // los usan los filtros comentados
   const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
+  void [setEmpleado]; // los usan los filtros comentados
   const filtros: FiltroTransferencias | undefined =
     origen || empleado ? { depositoOrigenId: origen?.id, empleadoId: empleado?.id } : undefined;
   const transferencias = usePagedResource<TransferenciaStockResponseDTO, FiltroTransferencias>(inventarioApi.transferencias.list, {
@@ -182,14 +197,16 @@ export const TransferenciasPanel: React.FC = () => {
         columns={[...columnasTransferencias, columnaVer(setDetalle)]}
         rowKey={(t) => t.id}
         label="transferencias"
-        searchPlaceholder="Buscar por depósito o responsable..."
+        searchPlaceholder="Buscar por código, depósito o responsable..."
         onRowClick={setDetalle}
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <FiltroDeposito value={origen} onChange={setOrigen} depositos={depositos.data} titulo="Origen" />
             <div className="w-full sm:w-56">
               <EmpleadoPicker value={empleado} onChange={setEmpleado} placeholder="Todos los responsables" />
             </div>
+            */}
             {isAdmin && (
               <Button variant="primario" onClick={() => setFormOpen(true)}>
                 <Plus />
@@ -202,8 +219,8 @@ export const TransferenciasPanel: React.FC = () => {
       <MovimientoFormModal tipo="transferencia" isOpen={formOpen} onClose={() => setFormOpen(false)} onSaved={transferencias.reload} />
       <DetalleMovimiento
         movimiento={detalle}
-        titulo={detalle ? `Transferencia N.º ${detalle.id}` : ''}
-        datos={detalle ? [['Origen', detalle.nombreDepositoOrigen], ['Destino', detalle.nombreDepositoDestino], ['Observación', detalle.observacion ?? '—'], ['Responsable', detalle.nombreEmpleado]] : []}
+        titulo={detalle ? `Transferencia ${formatCodigo('TRA', detalle.id)}` : ''}
+        datos={detalle ? [['Origen', detalle.nombreDepositoOrigen], ['Destino', detalle.nombreDepositoDestino], ['Observación', detalle.observacion ?? '—'], ['Responsable', detalle.nombreEmpleado], ['Fecha', detalle.fechaCreacion ? formatDate(detalle.fechaCreacion) : '—']] : []}
         onClose={() => setDetalle(null)}
       />
     </>
@@ -338,3 +355,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({ tipo, onClose, onSaved 
     </form>
   );
 };
+
+
+// Los filtros de la tabla están comentados: estas referencias evitan errores de "sin usar" hasta descomentarlos.
+void [FiltroDeposito];

@@ -37,12 +37,19 @@ import { useApp } from '../../context/AppContext';
 export const FacturasPanel: React.FC = () => {
   const { isAdmin } = useApp();
   const [estado, setEstado] = useState<EstadoFacturaVenta | ''>('');
+  void [setEstado]; // los usan los filtros comentados
   const [cliente, setCliente] = useState<ClienteResponseDTO | null>(null);
+  void [setCliente]; // los usan los filtros comentados
   const [empleado, setEmpleado] = useState<EmpleadoResponseDTO | null>(null);
+  void [setEmpleado]; // los usan los filtros comentados
   const [deposito, setDeposito] = useState<DepositoResponseDTO | null>(null);
+  void [setDeposito]; // los usan los filtros comentados
   const [fechaDesde, setFechaDesde] = useState('');
+  void [setFechaDesde]; // los usan los filtros comentados
   const [fechaHasta, setFechaHasta] = useState('');
+  void [setFechaHasta]; // los usan los filtros comentados
   const depositos = useAsyncData(catalogos.depositos);
+  void [depositos]; // los usan los filtros comentados
   const filtros: FacturaVentaFilters | undefined =
     estado || cliente || empleado || deposito || fechaDesde || fechaHasta
       ? {
@@ -121,6 +128,7 @@ export const FacturasPanel: React.FC = () => {
         onRowClick={(f) => setIdSeleccionada(f.idFacturaVenta)}
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <div className="w-full sm:w-56">
               <ClienteSelector value={cliente} onChange={setCliente} placeholder="Todos los clientes" />
             </div>
@@ -163,6 +171,7 @@ export const FacturasPanel: React.FC = () => {
               <option value="EMITIDA">Emitidas</option>
               <option value="ANULADA">Anuladas</option>
             </select>
+            */}
             <Button variant="primario" onClick={() => abrirFormulario(null)}>
               <Plus />
               <span>Nueva factura</span>
@@ -185,3 +194,7 @@ export const FacturasPanel: React.FC = () => {
     </>
   );
 };
+
+
+// Los filtros de la tabla están comentados: estas referencias evitan errores de "sin usar" hasta descomentarlos.
+void [ClienteSelector, DepositoBuscador, EmpleadoPicker, fieldClass, cn];

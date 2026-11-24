@@ -1,4 +1,5 @@
-import { NUMERO_FACTURA_PATTERN, formatNumeroFactura, maskNumeroFactura, padNumeroFactura, prefijoFactura } from '../../lib/paraguay';
+import { formatNumeroFactura } from '../../lib/paraguay';
+import { cn } from '../../lib/utils';
 import type { ClienteResponseDTO, DepositoResponseDTO } from '../../types/api';
 import { ClienteFormModal } from './ClienteFormModal';
 import { ClientePicker } from './ClientePicker';
@@ -120,22 +121,6 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
   const [idTimbrado, setIdTimbrado] = useState<number | ''>(factura?.idTimbrado ?? '');
   const [lineas, setLineas] = useState<LineItem[]>(() => (lineasIniciales && lineasIniciales.length > 0 ? lineasIniciales : [newLineItem()]));
 
-  const timbrado = catalogos.data?.timbrados.find((t) => t.idTimbrado === idTimbrado);
-
-  // Número de factura: establecimiento-punto-número, con el prefijo que impone el timbrado.
-  // Una factura ya guardada con otro formato puede modificarse mientras no se le cambie el número.
-  const prefijo = timbrado ? prefijoFactura(timbrado.sucursal, timbrado.puntoExpedicion) : null;
-  const exigirFormato = !factura || numeroFactura !== formatNumeroFactura(factura.numeroFactura);
-  const numeroCompleto = padNumeroFactura(numeroFactura);
-  const numeroValido = NUMERO_FACTURA_PATTERN.test(numeroCompleto);
-  const errorNumero = !exigirFormato || !numeroFactura
-    ? null
-    : !numeroValido
-      ? 'El número debe tener el formato 001-001-0000001.'
-      : prefijo && !numeroCompleto.startsWith(prefijo)
-        ? `Con este timbrado el número debe empezar con ${prefijo}`
-        : null;
-
   // Promociones vigentes en la fecha de la factura: su descuento se ve en cada línea (ventas lo aplica al guardar).
   const cargarDescuentos = useCallback(async () => {
     const lista = await ventasApi.promociones.descuentosVigentes(fechaEmision);
@@ -145,29 +130,23 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
 
   const elegirTimbrado = (id: number | '') => {
     setIdTimbrado(id);
-    const elegido = catalogos.data?.timbrados.find((t) => t.idTimbrado === id);
-    if (!elegido || !exigirFormato) return;
-    // Factura nueva: el número es automático, el siguiente de la secuencia del timbrado.
-    if (!factura) {
-      setNumeroFactura(prefijoFactura(elegido.sucursal, elegido.puntoExpedicion));
-      ventasApi.facturas
-        .siguienteNumero(elegido.idTimbrado)
-        .then((r) => setNumeroFactura(r.numeroFactura))
-        .catch(() => {
-          // Si no se pudo calcular, queda el prefijo y el número se completa a mano.
-        });
-      return;
-    }
-    // Se conserva lo ya escrito del número y se corrige solo el prefijo.
-    const secuencia = maskNumeroFactura(numeroFactura).split('-')[2] ?? '';
-    setNumeroFactura(prefijoFactura(elegido.sucursal, elegido.puntoExpedicion) + secuencia);
+    // Una factura ya emitida conserva su número y su timbrado.
+    if (factura) return;
+    setNumeroFactura('');
+    if (id === '') return;
+    // Vista previa del número: el siguiente del timbrado. Ventas lo vuelve a calcular al emitir.
+    ventasApi.facturas
+      .siguienteNumero(id)
+      .then((r) => setNumeroFactura(r.numeroFactura))
+      .catch(() => setNumeroFactura(''));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorNumero || !cliente || !empleado || !deposito) return;
+    if (!cliente || !empleado || !deposito) return;
     const request: FacturaVentaRequestDTO = {
-      numeroFactura: numeroValido ? padNumeroFactura(numeroFactura) : numeroFactura.trim(),
+      // Ventas lo reemplaza por el siguiente número real del timbrado (este es solo la vista previa).
+      numeroFactura: numeroFactura.trim() || 'AUTO',
       fechaEmision,
       idCliente: cliente?.idCliente ?? 0,
       idEmpleado: empleado.id,
@@ -208,7 +187,7 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
           {/* ---- Cabecera ---- */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <FormField label="Timbrado" required>
-              <select className={fieldClass} required value={idTimbrado} onChange={(e) => elegirTimbrado(idONada(e.target.value))}>
+              <select className={fieldClass} required disabled={Boolean(factura)} value={idTimbrado} onChange={(e) => elegirTimbrado(idONada(e.target.value))}>
                 <option value="">Seleccionar...</option>
                 {datos.timbrados.map((t) => (
                   <option key={t.idTimbrado} value={t.idTimbrado}>
@@ -217,18 +196,16 @@ const FacturaForm: React.FC<{ onClose: () => void; onSaved: () => void; factura:
                 ))}
               </select>
             </FormField>
-            <FormField label="Número de factura" required>
+            <FormField label="Número de factura" hint={factura ? undefined : 'Automático: el siguiente del timbrado al emitir.'}>
+              {/* No se escribe: lo asigna ventas al emitir (el siguiente del timbrado) y no cambia después. */}
               <input
-                className={fieldClass}
-                required
-                maxLength={50}
-                inputMode="numeric"
+                className={cn(fieldClass, 'bg-slate-100 text-slate-600 cursor-not-allowed')}
+                readOnly
+                tabIndex={-1}
                 value={numeroFactura}
-                onChange={(e) => setNumeroFactura(maskNumeroFactura(e.target.value))}
-                onBlur={() => exigirFormato && setNumeroFactura(padNumeroFactura(numeroFactura))}
-                placeholder={`${prefijo ?? '001-001-'}0000001`}
+                placeholder={idTimbrado ? 'Calculando...' : 'Elija el timbrado'}
+                title="El número de factura es automático"
               />
-              {errorNumero && <p className="text-[11px] text-rose-600 mt-1">{errorNumero}</p>}
             </FormField>
             <FormField label="Fecha de emisión" required>
               <input

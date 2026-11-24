@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { usePosicionFlotante } from '../../hooks/usePosicionFlotante';
 import { Loader2, Search, UserPlus, X } from 'lucide-react';
 import { fieldClass } from '../common';
 import { useDebounce } from '../../hooks';
@@ -30,6 +31,7 @@ export const ClientePicker: React.FC<ClientePickerProps> = ({ value, onChange, o
   const [encontrado, setEncontrado] = useState<{ texto: string | null; clientes: ClienteResponseDTO[] }>({ texto: null, clientes: [] });
   const [resaltado, setResaltado] = useState(0);
   const contenedor = useRef<HTMLDivElement>(null);
+  const flotante = usePosicionFlotante(contenedor, abierto);
   const busqueda = useDebounce(texto.trim(), 250);
 
   useEffect(() => {
@@ -142,7 +144,7 @@ export const ClientePicker: React.FC<ClientePickerProps> = ({ value, onChange, o
       />
 
       {abierto && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden text-xs">
+        <div style={flotante} className="bg-white border border-slate-200 rounded-xl shadow-lg text-xs">
           {resultados.map((cliente, i) => (
             <button
               key={cliente.idCliente}

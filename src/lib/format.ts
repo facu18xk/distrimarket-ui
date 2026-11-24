@@ -27,3 +27,6 @@ export function todayIso(): string {
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
 }
+
+export const formatCodigo = (prefijo: string, id: number, longitud = 4): string =>
+    `${prefijo}-${String(id).padStart(longitud, '0')}`;

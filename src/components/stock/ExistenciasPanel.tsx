@@ -20,8 +20,11 @@ export const ExistenciasPanel: React.FC = () => {
   // Con depósito asignado no hace falta el catálogo de depósitos (el filtro queda fijo).
   const cargarDepositos = useCallback(() => (asignado ? Promise.resolve([]) : catalogos.depositos()), [asignado]);
   const depositos = useAsyncData(cargarDepositos);
+  void [depositos]; // los usan los filtros comentados
   const [filtroDeposito, setFiltroDeposito] = useState<DepositoResponseDTO | null>(null);
+  void [setFiltroDeposito]; // los usan los filtros comentados
   const [filtroProducto, setFiltroProducto] = useState<ProductoResponseDTO | null>(null);
+  void [setFiltroProducto]; // los usan los filtros comentados
   const deposito = asignado ?? filtroDeposito;
   const filtros: FiltrosExistencia | undefined =
     deposito || filtroProducto ? { depositoId: deposito?.id, productoId: filtroProducto?.id } : undefined;
@@ -78,6 +81,7 @@ export const ExistenciasPanel: React.FC = () => {
         searchPlaceholder="Buscar por producto o depósito..."
         filters={
           <>
+            {/* Filtros ocultos por ahora (solo buscador y botón de agregar). Para volver a mostrarlos, descomentar:
             <div className="w-full sm:w-64">
               <DepositoBuscador
                 depositos={depositos.data ?? []}
@@ -95,6 +99,7 @@ export const ExistenciasPanel: React.FC = () => {
                 placeholder="Todos los productos"
               />
             </div>
+            */}
             {puedeEditar && (
               <Button variant="primario" onClick={() => abrir(null)}>
                 <Plus />

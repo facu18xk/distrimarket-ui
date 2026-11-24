@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Warehouse, X } from 'lucide-react';
 import { fieldClass } from './FormControls';
-import { useHaciaArriba } from '../../hooks/useHaciaArriba';
+import { usePosicionFlotante } from '../../hooks/usePosicionFlotante';
 import { cn } from '../../lib/utils';
 import type { DepositoResponseDTO } from '../../types/api';
 
@@ -32,7 +32,7 @@ export const DepositoBuscador: React.FC<DepositoBuscadorProps> = ({ depositos, v
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
   const contenedor = useRef<HTMLDivElement>(null);
-  const haciaArriba = useHaciaArriba(contenedor, abierto);
+  const flotante = usePosicionFlotante(contenedor, abierto);
 
   const coincidencias = useMemo(() => {
     const terminos = normalizar(texto).split(/\s+/).filter(Boolean);
@@ -81,7 +81,6 @@ export const DepositoBuscador: React.FC<DepositoBuscadorProps> = ({ depositos, v
       <div className={cn(fieldClass, 'flex items-center justify-between gap-2 bg-white')}>
         <span className="min-w-0 truncate">
           <strong className="text-slate-900">{value.nombre}</strong>
-          {value.ubicacion ? <span className="text-slate-400"> · {value.ubicacion}</span> : null}
         </span>
         {!disabled && (
           <button type="button" onClick={() => onChange(null)} className="shrink-0 text-slate-400 hover:text-slate-700" title="Cambiar depósito">
@@ -114,7 +113,7 @@ export const DepositoBuscador: React.FC<DepositoBuscadorProps> = ({ depositos, v
         aria-expanded={abierto}
       />
       {abierto && (
-        <div className={cn('absolute z-30 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden text-xs', haciaArriba ? 'bottom-full mb-1' : 'mt-1')}>
+        <div style={flotante} className="bg-white border border-slate-200 rounded-xl shadow-lg text-xs">
           {resultados.map((d, i) => (
             <button
               key={d.id}
@@ -125,7 +124,6 @@ export const DepositoBuscador: React.FC<DepositoBuscadorProps> = ({ depositos, v
             >
               <Warehouse className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="font-semibold text-slate-800 truncate">{d.nombre}</span>
-              {d.ubicacion && <span className="text-slate-500 truncate">· {d.ubicacion}</span>}
             </button>
           ))}
           {resultados.length === 0 && <p className="px-3 py-2 text-slate-400">No hay depósitos que coincidan.</p>}

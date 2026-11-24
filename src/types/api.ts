@@ -286,6 +286,7 @@ export interface AjusteStockRequestDTO {
 
 export interface AjusteStockResponseDTO {
   id: number;
+  fechaCreacion?: string;
   idDeposito: number;
   nombreDeposito: string;
   idEmpleado: number;
@@ -305,6 +306,7 @@ export interface TransferenciaStockRequestDTO {
 
 export interface TransferenciaStockResponseDTO {
   id: number;
+  fechaCreacion?: string;
   idDepositoOrigen: number;
   nombreDepositoOrigen: string;
   idDepositoDestino: number;

@@ -22,8 +22,18 @@ export default defineConfig(({ mode }) => {
     server: {
       // El navegador llama a /auth, /ventas, /inventario y /compras en su mismo origen
       // y Vite lo reenvía al API Gateway: así no hace falta CORS en el backend.
+      // Si el navegador navega a una de esas rutas (pide HTML, por ejemplo escribiendo /ventas en la barra),
+      // se sirve la UI y no se reenvía al gateway: así se ve la página 404 de la app y no un JSON del API.
       proxy: Object.fromEntries(
-        ['/auth', '/ventas', '/inventario', '/compras'].map((ruta) => [ruta, { target: gateway, changeOrigin: true }])
+        ['/auth', '/ventas', '/inventario', '/compras'].map((ruta) => [
+          ruta,
+          {
+            target: gateway,
+            changeOrigin: true,
+            bypass: (req: { headers: { accept?: string } }) =>
+              req.headers.accept?.includes('text/html') ? '/index.html' : undefined,
+          },
+        ])
       ),
     },
   }
