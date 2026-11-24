@@ -335,8 +335,8 @@ export interface FacturaCompraDetalleRequestDTO {
 export interface FacturaCompraRequestDTO {
   numeroFactura: string;
   fechaEmision: string;
-  /** Timbrado del proveedor: opcional, el formulario ya no lo pide. */
-  timbrado?: string;
+  /** Timbrado impreso en la factura del proveedor. */
+  timbrado: string;
   idProveedor: number;
   idDeposito: number;
   idMedioPago: number;

@@ -193,6 +193,7 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
   const catalogos = useAsyncData(cargarCatalogosCompra);
   const guardar = useAsyncAction();
   const [numeroFactura, setNumeroFactura] = useState('');
+  const [timbrado, setTimbrado] = useState('');
   const [fechaEmision, setFechaEmision] = useState(todayIso());
   const [proveedor, setProveedor] = useState<ProveedorResponseDTO | null>(null);
   // El comprador compra siempre para su depósito asignado (el backend también lo impone).
@@ -223,10 +224,11 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (errorNumero || !proveedor || !deposito) return;
+    if (errorNumero || !proveedor || !deposito || !timbrado.trim()) return;
     const ok = await guardar.run(() =>
       comprasApi.facturas.create({
         numeroFactura: numeroCompleto,
+        timbrado: timbrado.trim(),
         fechaEmision,
         idProveedor: proveedor.idProveedor,
         idDeposito: deposito.id,
@@ -271,6 +273,17 @@ const FacturaCompraForm: React.FC<{ onClose: () => void; onSaved: () => void }> 
               placeholder="001-001-0000001"
             />
             {errorDeCampo(errorNumero)}
+          </FormField>
+          <FormField label="Timbrado" required hint="Número impreso en la factura del proveedor.">
+            <input
+              className={fieldClass}
+              required
+              pattern=".*\S.*"
+              title="Ingresá el timbrado de la factura."
+              maxLength={20}
+              value={timbrado}
+              onChange={(e) => setTimbrado(e.target.value)}
+            />
           </FormField>
           <FormField label="Condición" required>
             <select className={fieldClass} value={condicion} onChange={(e) => setCondicion(e.target.value as CondicionCompra)}>
